@@ -1,7 +1,7 @@
-From 60b64e768e20eafd568449f3a262f64bf60a1938 Mon Sep 17 00:00:00 2001
+From abb8d5f599d90cad4e9aa57835b1c047e1f59c9f Mon Sep 17 00:00:00 2001
 From: cnfatal <cnfatal@gmail.com>
 Date: Mon, 16 Feb 2026 21:54:16 +0800
-Subject: [PATCH] Use RENPY_ROOT env var in copy_renpy.sh
+Subject: [PATCH 1/8] Use RENPY_ROOT env var in copy_renpy.sh
 
 Replace hardcoded /home/tom/ab/renpy with ${RENPY_ROOT} environment
 variable (with fallback to the original default). This allows building
@@ -24,5 +24,5 @@ index d322831..b861c5f 100755
  
  pushd $renpy
 -- 
-2.34.1
+2.52.0
 

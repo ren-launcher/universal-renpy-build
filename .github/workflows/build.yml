@@ -2,12 +2,12 @@ name: Build Ren'Py Distribution
 
 on:
   push:
-    tags: ['v*']
+    tags: ["v*"]
   workflow_dispatch:
     inputs:
       target:
-        description: 'Build targets to run'
-        default: 'all'
+        description: "Build targets to run"
+        default: "all"
         type: choice
         options:
           - all
@@ -92,10 +92,23 @@ jobs:
 
       - name: Install system dependencies
         run: |
-          # Install Rosetta 2 for x86_64 builds (Ren'Py 7.3.5 is x86_64 only)
+          # Install Rosetta 2 for x86_64 builds (deps Python 2.7.10 is x86_64 only)
           softwareupdate --install-rosetta --agree-to-license || true
-          # Use ARM brew for build tools (they produce target-arch output, not host-arch)
-          brew install nasm yasm ccache
+          # nasm: libjpeg-turbo SIMD; libtool: GNU libtool for autoreconf (AC_PROG_LIBTOOL)
+          brew install nasm yasm libtool ccache
+
+      - name: Setup Python 2.7
+        run: |
+          # Ren'Py 7.x build scripts require Python 2
+          brew install pyenv
+          eval "$(pyenv init -)"
+          pyenv install 2.7.18
+          pyenv shell 2.7.18
+          pip install virtualenv
+          python -m virtualenv work/py2-venv
+          echo "PYENV_ROOT=$HOME/.pyenv" >> $GITHUB_ENV
+          echo "$HOME/.pyenv/bin" >> $GITHUB_PATH
+          echo "$HOME/.pyenv/shims" >> $GITHUB_PATH
 
       - name: Cache C dependencies
         uses: actions/cache@v4
@@ -104,10 +117,13 @@ jobs:
           key: mac-deps-${{ hashFiles('config.env') }}
 
       - name: Build lib/darwin-x86_64
-        run: arch -x86_64 make lib-only
+        run: |
+          eval "$(pyenv init -)"
+          pyenv shell 2.7.18
+          make lib-only
 
       - name: Build renios native
-        run: arch -x86_64 make renios-native
+        run: make renios-native
 
       - name: Upload lib/darwin-x86_64
         uses: actions/upload-artifact@v4

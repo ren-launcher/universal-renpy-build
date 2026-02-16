@@ -33,6 +33,7 @@ Makefile                        <- single orchestration entry point
 ### System Dependencies
 
 **Linux (Ubuntu/Debian)**:
+
 ```bash
 sudo apt-get install -y \
   build-essential ccache patchelf \
@@ -46,12 +47,28 @@ sudo apt-get install -y \
   nasm yasm
 ```
 
-**macOS**:
+**macOS (Apple Silicon / arm64)**:
+
 ```bash
-brew install nasm yasm ccache
-# Xcode with command-line tools required for renios
+# Build tools
+brew install nasm yasm libtool coreutils
+
+# Python 2.7 (required by Ren'Py 7.x build scripts)
+brew install pyenv
+pyenv install 2.7.18
+pyenv shell 2.7.18
+python -m virtualenv work/py2-venv
+
+# Xcode with command-line tools (required for renios)
 xcode-select --install
+
+# Rosetta 2 (required on Apple Silicon — deps Python 2.7.10 is x86_64 only)
+softwareupdate --install-rosetta --agree-to-license
 ```
+
+> **Note**: `ccache` is optional — patches make it a no-op if absent.
+> The build runs under Rosetta 2 on Apple Silicon for the deps stage;
+> renios cross-compiles natively for arm64 iOS / x86_64 Simulator.
 
 ### Build
 
@@ -157,14 +174,15 @@ cd work/<repo> && git log --oneline
 
 The GitHub Actions workflow at `.github/workflows/build.yml` uses a multi-runner architecture:
 
-| Job | Runner | Produces |
-|-----|--------|----------|
-| `build-linux` | `ubuntu-22.04` | `lib/linux-x86_64/` + RAPT native `.so` |
-| `build-mac` | `macos-13` | `lib/darwin-x86_64/` + renios native libs |
-| `package` | `ubuntu-22.04` | Merges all libs, builds SDK + RAPT DLC + renios DLC |
-| `release` | `ubuntu-latest` | Creates GitHub Release from tag |
+| Job           | Runner          | Produces                                            |
+| ------------- | --------------- | --------------------------------------------------- |
+| `build-linux` | `ubuntu-22.04`  | `lib/linux-x86_64/` + RAPT native `.so`             |
+| `build-mac`   | `macos-13`      | `lib/darwin-x86_64/` + renios native libs           |
+| `package`     | `ubuntu-22.04`  | Merges all libs, builds SDK + RAPT DLC + renios DLC |
+| `release`     | `ubuntu-latest` | Creates GitHub Release from tag                     |
 
 Workflow triggers:
+
 - **Tag push** (`v*`): automatic full build and GitHub Release creation
 - **Manual dispatch**: select target (all / linux-only / mac-only)
 
@@ -178,13 +196,13 @@ Alignment is automatically verified via `readelf` during the build.
 
 ## Dependency Versions
 
-| Component | Version | Source |
-|-----------|---------|--------|
-| Ren'Py | 7.3.5.606 | source build |
-| Python | 2.7.10 | renpy-deps/source/ |
-| SDL2 | 2.0.4 | renpy-deps/source/ |
-| FFmpeg | 3.0 | renpy-deps/source/ |
-| FreeType | 2.4.11 | renpy-deps/source/ |
-| GLEW | 1.7.0 | renpy-deps/source/ |
-| Cython | 0.29.36 | pip (RAPT cross-compile) |
-| Android NDK | r19c (19.2.5345600) | sdkmanager |
+| Component   | Version             | Source                   |
+| ----------- | ------------------- | ------------------------ |
+| Ren'Py      | 7.3.5.606           | source build             |
+| Python      | 2.7.10              | renpy-deps/source/       |
+| SDL2        | 2.0.4               | renpy-deps/source/       |
+| FFmpeg      | 3.0                 | renpy-deps/source/       |
+| FreeType    | 2.4.11              | renpy-deps/source/       |
+| GLEW        | 1.7.0               | renpy-deps/source/       |
+| Cython      | 0.29.36             | pip (RAPT cross-compile) |
+| Android NDK | r19c (19.2.5345600) | sdkmanager               |

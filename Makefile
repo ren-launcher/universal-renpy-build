@@ -31,6 +31,10 @@ OUTPUT       := $(ROOT)/output
 ANDROID_HOME ?= $(HOME)/Android/Sdk
 ANDROID_NDK  := $(ANDROID_HOME)/ndk/$(ANDROID_NDK_VERSION)
 
+# Python 2 virtualenv (provides `python` command for renpy-deps build scripts)
+PY2_VENV     := $(WORK)/py2-venv
+ACTIVATE_PY2  = . $(PY2_VENV)/bin/activate &&
+
 # Makefile internal stamp dir
 STAMPS       := $(WORK)/.stamps
 $(shell mkdir -p $(STAMPS) $(OUTPUT))
@@ -86,17 +90,28 @@ $(STAMPS)/patched-renios: $(wildcard patches/renios/*.patch) $(STAMPS)/cloned
 	  git am $(ROOT)/patches/renios/*.patch
 	@touch $@
 
+$(STAMPS)/patched-renpy-deps: $(wildcard patches/renpy-deps/*.patch) $(STAMPS)/cloned
+	@echo "==> Applying renpy-deps patches..."
+	cd $(RENPY_DEPS) && git reset --hard $(RENPY_DEPS_TAG) && \
+	  git am $(ROOT)/patches/renpy-deps/*.patch
+	@touch $@
+
 # ============================================================================
 # Stage 3: Build C dependencies via renpy-deps
 #   Linux: build_python.sh + build.sh  (with PKG_CONFIG_PATH fix)
-#   macOS: build_mac.sh (wraps both with MACOSX_DEPLOYMENT_TARGET=10.6)
+#   macOS: build_mac.sh (wraps both with MACOSX_DEPLOYMENT_TARGET=10.9)
 # ============================================================================
 
-$(STAMPS)/deps: $(STAMPS)/cloned
+$(STAMPS)/deps: $(STAMPS)/patched-renpy-deps
 	@echo "==> Building C dependencies for $(PLATFORM)..."
 	mkdir -p $(DEPS_BUILD)
 ifeq ($(UNAME_S),Darwin)
-	cd $(DEPS_BUILD) && bash $(RENPY_DEPS)/build_mac.sh
+  ifeq ($(UNAME_M),arm64)
+	@echo "==> Building under Rosetta 2 (x86_64) for Apple Silicon..."
+	cd $(DEPS_BUILD) && $(ACTIVATE_PY2) /usr/bin/arch -x86_64 bash $(RENPY_DEPS)/build_mac.sh
+  else
+	cd $(DEPS_BUILD) && $(ACTIVATE_PY2) bash $(RENPY_DEPS)/build_mac.sh
+  endif
 else
 	cd $(DEPS_BUILD) && bash $(RENPY_DEPS)/build_python.sh
 	cd $(DEPS_BUILD) && export PKG_CONFIG_PATH="$(DEPS_BUILD)/install/lib/pkgconfig:$$PKG_CONFIG_PATH" && \
@@ -109,10 +124,18 @@ endif
 # ============================================================================
 
 $(STAMPS)/modules: $(STAMPS)/deps $(STAMPS)/patched-renpy
+	@echo "==> Bootstrapping pip in deps Python..."
+	. $(DEPS_BUILD)/env.sh && \
+	  python -m ensurepip 2>/dev/null || true
 	@echo "==> Installing Cython into deps Python..."
 	. $(DEPS_BUILD)/env.sh && \
 	  python -m pip install --no-build-isolation "Cython==$(CYTHON_VERSION)" 2>/dev/null || \
-	  python -m pip install "Cython==$(CYTHON_VERSION)"
+	  ( echo "==> Downloading Cython wheel via system Python (SSL fallback)..." && \
+	    $(ACTIVATE_PY2) pip download --no-deps --dest /tmp/cython-wheel \
+	      "Cython==$(CYTHON_VERSION)" && \
+	    . $(DEPS_BUILD)/env.sh && \
+	    python -m pip install --no-index --find-links /tmp/cython-wheel \
+	      "Cython==$(CYTHON_VERSION)" )
 	@echo "==> Building pygame_sdl2..."
 	. $(DEPS_BUILD)/env.sh && \
 	  export PYGAME_SDL2_INSTALL_HEADERS=1 && \
@@ -266,6 +289,7 @@ ifeq ($(UNAME_S),Darwin)
 	export XCODEAPP=$$(xcode-select -p | sed 's|/Contents/Developer||') && \
 	  export RENPY_ROOT=$(RENPY_ROOT) && \
 	  export PYGAME_SDL2_ROOT=$(PYGAME_ROOT) && \
+	  export PY2_VENV=$(PY2_VENV) && \
 	  cd $(RENIOS_ROOT) && bash build_all.sh
 else
 	@echo "SKIP: renios native build requires macOS with Xcode."
