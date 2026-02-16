@@ -1,0 +1,28 @@
+From bffa3aa622384e5b87f73cc42b74185072248cab Mon Sep 17 00:00:00 2001
+From: cnfatal <cnfatal@gmail.com>
+Date: Tue, 17 Feb 2026 03:48:00 +0800
+Subject: [PATCH 8/8] Disable yasm/nasm in ffmpeg build for modern nasm
+ compatibility
+
+FFmpeg 3.0 assembly code is incompatible with NASM 3.x (implicit
+DEFAULT ABS deprecated error). Since all SSE instructions are already
+disabled, yasm/nasm is not needed.
+---
+ dependencies/scripts/build-ffmpeg.sh | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/dependencies/scripts/build-ffmpeg.sh b/dependencies/scripts/build-ffmpeg.sh
+index 361f93f..69e9904 100755
+--- a/dependencies/scripts/build-ffmpeg.sh
++++ b/dependencies/scripts/build-ffmpeg.sh
+@@ -99,6 +99,7 @@ try ./configure --prefix=$DESTROOT \
+     --disable-vdpau \
+     --disable-videotoolbox \
+     --disable-iconv \
++    --disable-yasm \
+     --disable-sse --disable-sse2 --disable-sse3 --disable-ssse3 --disable-sse4 --disable-sse42 \
+     --enable-pic
+ 
+-- 
+2.52.0
+

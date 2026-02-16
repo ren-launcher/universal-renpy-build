@@ -1,0 +1,28 @@
+From abb8d5f599d90cad4e9aa57835b1c047e1f59c9f Mon Sep 17 00:00:00 2001
+From: cnfatal <cnfatal@gmail.com>
+Date: Mon, 16 Feb 2026 21:54:16 +0800
+Subject: [PATCH 1/8] Use RENPY_ROOT env var in copy_renpy.sh
+
+Replace hardcoded /home/tom/ab/renpy with ${RENPY_ROOT} environment
+variable (with fallback to the original default). This allows building
+renios DLC from any workspace layout.
+---
+ copy_renpy.sh | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/copy_renpy.sh b/copy_renpy.sh
+index d322831..b861c5f 100755
+--- a/copy_renpy.sh
++++ b/copy_renpy.sh
+@@ -2,7 +2,7 @@
+ 
+ set -ex
+ 
+-renpy=/home/tom/ab/renpy
++renpy="${RENPY_ROOT:-/home/tom/ab/renpy}"
+ prototype=$(dirname $(readlink -f $0))/prototype
+ 
+ pushd $renpy
+-- 
+2.52.0
+

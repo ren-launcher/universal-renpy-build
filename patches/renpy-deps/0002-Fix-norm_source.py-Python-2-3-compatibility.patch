@@ -1,0 +1,28 @@
+From 6e2ee2cbb276339af1df327fa724df5ae18ecedc Mon Sep 17 00:00:00 2001
+From: cnfatal <cnfatal@gmail.com>
+Date: Tue, 17 Feb 2026 15:54:35 +0800
+Subject: [PATCH] Fix norm_source.py Python 2/3 compatibility
+
+Use print() function syntax instead of print statement
+so the script works with both Python 2 and Python 3.
+---
+ source/norm_source.py | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/source/norm_source.py b/source/norm_source.py
+index 1d9741f..a8a9f1c 100644
+--- a/source/norm_source.py
++++ b/source/norm_source.py
+@@ -5,7 +5,7 @@ pwd = sys.argv[1][1:]
+ dir = sys.argv[2][1:]
+ 
+ if dir.startswith("/"):
+-    print dir
++    print(dir)
+ else:
+-    print posixpath.normpath(pwd + "/" + dir)
++    print(posixpath.normpath(pwd + "/" + dir))
+     
+-- 
+2.52.0
+

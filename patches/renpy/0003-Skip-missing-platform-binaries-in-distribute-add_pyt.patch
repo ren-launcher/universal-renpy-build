@@ -1,0 +1,75 @@
+From cb5d475d8fe017ffa1380610a81597a6f8194450 Mon Sep 17 00:00:00 2001
+From: cnfatal <cnfatal@gmail.com>
+Date: Mon, 16 Feb 2026 19:30:06 +0800
+Subject: [PATCH] Skip missing platform binaries in distribute add_python
+
+Make add_python check os.path.exists for each platform binary
+(linux-i686, linux-x86_64, darwin-x86_64) before adding it,
+consistent with how linux-armv7l is already handled.
+This allows building the SDK with only a subset of platforms.
+---
+ launcher/game/distribute.rpy | 40 +++++++++++++++++++++---------------
+ 1 file changed, 24 insertions(+), 16 deletions(-)
+
+diff --git a/launcher/game/distribute.rpy b/launcher/game/distribute.rpy
+index 9e7e740..0a8cc4b 100644
+--- a/launcher/game/distribute.rpy
++++ b/launcher/game/distribute.rpy
+@@ -884,17 +884,23 @@ init python in distribute:
+                 mac = 'mac'
+                 raspi = 'linux'
+ 
+-            self.add_file(
+-                linux,
+-                "lib/linux-i686/" + self.executable_name,
+-                os.path.join(config.renpy_base, "lib/linux-i686/pythonw"),
+-                True)
+-
+-            self.add_file(
+-                linux,
+-                "lib/linux-x86_64/" + self.executable_name,
+-                os.path.join(config.renpy_base, "lib/linux-x86_64/pythonw"),
+-                True)
++            i686fn = os.path.join(config.renpy_base, "lib/linux-i686/pythonw")
++
++            if os.path.exists(i686fn):
++                self.add_file(
++                    linux,
++                    "lib/linux-i686/" + self.executable_name,
++                    i686fn,
++                    True)
++
++            x64fn = os.path.join(config.renpy_base, "lib/linux-x86_64/pythonw")
++
++            if os.path.exists(x64fn):
++                self.add_file(
++                    linux,
++                    "lib/linux-x86_64/" + self.executable_name,
++                    x64fn,
++                    True)
+ 
+             armfn = os.path.join(config.renpy_base, "lib/linux-armv7l/pythonw")
+ 
+@@ -906,12 +912,14 @@ init python in distribute:
+                     armfn,
+                     True)
+ 
++            macfn = os.path.join(config.renpy_base, "lib/darwin-x86_64/pythonw")
+ 
+-            self.add_file(
+-                mac,
+-                "lib/darwin-x86_64/" + self.executable_name,
+-                os.path.join(config.renpy_base, "lib/darwin-x86_64/pythonw"),
+-                True)
++            if os.path.exists(macfn):
++                self.add_file(
++                    mac,
++                    "lib/darwin-x86_64/" + self.executable_name,
++                    macfn,
++                    True)
+ 
+ #             self.add_file(
+ #                 windows,
+-- 
+2.34.1
+
