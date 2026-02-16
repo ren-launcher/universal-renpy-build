@@ -75,25 +75,25 @@ $(STAMPS)/cloned: | $(STAMPS)
 $(STAMPS)/patched-renpy: $(wildcard patches/renpy/*.patch) $(STAMPS)/cloned
 	@echo "==> Applying Ren'Py patches..."
 	cd $(RENPY_ROOT) && git reset --hard $(RENPY_TAG) && \
-	  git am $(ROOT)/patches/renpy/*.patch
+	  git apply $(ROOT)/patches/renpy/*.patch
 	@touch $@
 
 $(STAMPS)/patched-rapt: $(wildcard patches/rapt/*.patch) $(STAMPS)/cloned
 	@echo "==> Applying RAPT patches..."
 	cd $(RAPT_ROOT) && git reset --hard $(RAPT_TAG) && \
-	  git am $(ROOT)/patches/rapt/*.patch
+	  git apply $(ROOT)/patches/rapt/*.patch
 	@touch $@
 
 $(STAMPS)/patched-renios: $(wildcard patches/renios/*.patch) $(STAMPS)/cloned
 	@echo "==> Applying renios patches..."
 	cd $(RENIOS_ROOT) && git reset --hard $(RENIOS_TAG) && \
-	  git am $(ROOT)/patches/renios/*.patch
+	  git apply $(ROOT)/patches/renios/*.patch
 	@touch $@
 
 $(STAMPS)/patched-renpy-deps: $(wildcard patches/renpy-deps/*.patch) $(STAMPS)/cloned
 	@echo "==> Applying renpy-deps patches..."
 	cd $(RENPY_DEPS) && git reset --hard $(RENPY_DEPS_TAG) && \
-	  git am $(ROOT)/patches/renpy-deps/*.patch
+	  git apply $(ROOT)/patches/renpy-deps/*.patch
 	@touch $@
 
 # ============================================================================
@@ -290,6 +290,7 @@ ifeq ($(UNAME_S),Darwin)
 	  export RENPY_ROOT=$(RENPY_ROOT) && \
 	  export PYGAME_SDL2_ROOT=$(PYGAME_ROOT) && \
 	  export PY2_VENV=$(PY2_VENV) && \
+	  export PATH="$(PY2_VENV)/bin:$$PATH" && \
 	  cd $(RENIOS_ROOT) && bash build_all.sh
 else
 	@echo "SKIP: renios native build requires macOS with Xcode."
