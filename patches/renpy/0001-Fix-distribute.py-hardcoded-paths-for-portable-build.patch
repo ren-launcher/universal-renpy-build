@@ -1,0 +1,53 @@
+From 798b6282c7a475bf7e2bede35daa0ade9484881c Mon Sep 17 00:00:00 2001
+From: ren-launcher <build@ren-launcher.dev>
+Date: Mon, 16 Feb 2026 18:23:21 +0800
+Subject: [PATCH 1/2] Fix distribute.py hardcoded paths for portable builds
+
+- Read RENPY_MAC_IDENTITY from environment instead of hardcoding
+- Skip update signing when private key is not available (read path
+  from RENPY_SIGN_KEY environment variable, fallback to original)
+---
+ distribute.py | 14 ++++++++------
+ 1 file changed, 8 insertions(+), 6 deletions(-)
+
+diff --git a/distribute.py b/distribute.py
+index ca1d552..23634a7 100755
+--- a/distribute.py
++++ b/distribute.py
+@@ -1,4 +1,5 @@
+-#!/home/tom/ab/renpy/lib/linux-x86_64/python -O
++#!/usr/bin/env python
++# -*- coding: utf-8 -*-
+ 
+ # Builds a distribution of Ren'Py.
+ from __future__ import print_function
+@@ -62,8 +63,8 @@ def main():
+ 
+     args = ap.parse_args()
+ 
+-    if args.sign:
+-        os.environ["RENPY_MAC_IDENTITY"] = "Developer ID Application: Tom Rothamel (XHTE5H7Z79)"
++    if args.sign and "RENPY_MAC_IDENTITY" not in os.environ:
++        os.environ["RENPY_MAC_IDENTITY"] = ""
+ 
+     # Revision updating is done early, so we can do it even if the rest
+     # of the program fails.
+@@ -188,11 +189,12 @@ def main():
+     print()
+     subprocess.check_call(cmd)
+ 
+-    # Sign the update.
+-    if not args.fast:
++    # Sign the update (skip if no private key available).
++    sign_key = os.environ.get("RENPY_SIGN_KEY", "/home/tom/ab/keys/renpy_private.pem")
++    if not args.fast and os.path.exists(sign_key):
+         subprocess.check_call([
+             "scripts/sign_update.py",
+-            "/home/tom/ab/keys/renpy_private.pem",
++            sign_key,
+             os.path.join(destination, "updates.json"),
+             ])
+ 
+-- 
+2.34.1
+
