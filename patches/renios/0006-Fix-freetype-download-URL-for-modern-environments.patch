@@ -5,6 +5,7 @@ Subject: [PATCH 6/8] Fix freetype download URL for modern environments
 
 - Use HTTPS + curl -fL to avoid fetching redirect/error HTML
 - Use freetype-old/ mirror path (freetype 2.4.12 moved to old archive)
+- Add --retry 3 --retry-delay 5 to handle transient server errors
 ---
  dependencies/scripts/build-freetype.sh | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
@@ -18,7 +19,7 @@ index 8d66834..bc5877b 100755
  if [ ! -f $CACHEROOT/freetype-$FREETYPE_VERSION.tar.gz ]; then
    echo "Downloading freetype source"
 -  try curl -L http://download.savannah.gnu.org/releases/freetype/freetype-$FREETYPE_VERSION.tar.gz > $CACHEROOT/freetype-$FREETYPE_VERSION.tar.gz
-+  try curl -fL https://download.savannah.gnu.org/releases/freetype/freetype-old/freetype-$FREETYPE_VERSION.tar.gz > $CACHEROOT/freetype-$FREETYPE_VERSION.tar.gz
++  try curl -fL --retry 3 --retry-delay 5 https://download.savannah.gnu.org/releases/freetype/freetype-old/freetype-$FREETYPE_VERSION.tar.gz > $CACHEROOT/freetype-$FREETYPE_VERSION.tar.gz
  fi
  
  echo "Unpacking freetype"
