@@ -42,13 +42,10 @@ jobs:
             virtualenv \
             xvfb nasm yasm
 
-      - name: Setup python -> python2
+      - name: Setup Python 2 virtualenv
         run: |
-          mkdir -p "$HOME/.local/bin"
-          ln -sf /usr/bin/python2 "$HOME/.local/bin/python"
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-          # Create py2-venv (used by Makefile fallback to download Cython wheel)
           virtualenv -p python2 work/py2-venv
+          echo "${{ github.workspace }}/work/py2-venv/bin" >> $GITHUB_PATH
 
       - name: Cache C dependencies
         uses: actions/cache@v4
