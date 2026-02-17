@@ -1,0 +1,58 @@
+From 4af686967e03ce24482d1510887140ab1da8df45 Mon Sep 17 00:00:00 2001
+From: fatalc <cnfatal@gmail.com>
+Date: Tue, 17 Feb 2026 03:15:36 +0800
+Subject: [PATCH 7/8] Pin pyobjus to 694ce31 and pre-generate pyobjus.c for iOS
+
+Pin to commit 694ce31 (last Python 2 compatible commit).
+The iOS code path in setup.py expects a pre-generated pyobjus.c,
+but this file was never shipped in the git repo. Pre-generate it
+using the deps cython CLI binary before the build, so hostpython
+does not need to import Cython at runtime (which fails due to
+Python 2/3 .so incompatibilities on modern macOS).
+---
+ dependencies/scripts/build-pyobjus.sh | 19 ++++++++++++++++++-
+ 1 file changed, 18 insertions(+), 1 deletion(-)
+
+diff --git a/dependencies/scripts/build-pyobjus.sh b/dependencies/scripts/build-pyobjus.sh
+index 0731f90..6bce69c 100755
+--- a/dependencies/scripts/build-pyobjus.sh
++++ b/dependencies/scripts/build-pyobjus.sh
+@@ -4,12 +4,29 @@
+ 
+ 
+ 
++# Pin to 694ce31 - last Python 2 compatible commit (supports Python 2.7/3.5-3.7)
++PYOBJUS_COMMIT=694ce31
++
+ if [ ! -d $TMPROOT/pyobjus ] ; then
+-    git clone https://github.com/kivy/pyobjus.git $TMPROOT/pyobjus
++    try git clone https://github.com/kivy/pyobjus.git $TMPROOT/pyobjus && git -C $TMPROOT/pyobjus checkout -f $PYOBJUS_COMMIT
+ fi
+ 
+ try pushd $TMPROOT/pyobjus
+ 
++# The iOS path in setup.py expects a pre-generated pyobjus.c, but this file was
++# never shipped in the git repo. Pre-generate it using the deps Cython binary
++# so hostpython does not need to import Cython at runtime (which would fail due
++# to Python 2/3 .so incompatibilities).
++if [ -f pyobjus/pyobjus.pyx ] && [ ! -f pyobjus/pyobjus.c ]; then
++    echo "Pre-generating pyobjus.c from pyobjus.pyx using deps cython..."
++    if [ -n "$RENPY_DEPS_INSTALL" ] && [ -x "$RENPY_DEPS_INSTALL/bin/cython" ]; then
++        try "$RENPY_DEPS_INSTALL/bin/cython" pyobjus/pyobjus.pyx
++    else
++        # Fallback: try cython from PATH
++        try cython pyobjus/pyobjus.pyx
++    fi
++fi
++
+ # Set environment variables for Python module cross-compile
+ OLD_CC="$CC"
+ OLD_CFLAGS="$CFLAGS"
+@@ -47,4 +64,3 @@ export CFLAGS="$OLD_CFLAGS"
+ export LDSHARED="$OLD_LDSHARED"
+ 
+ popd
+-
+-- 
+2.52.0
+
