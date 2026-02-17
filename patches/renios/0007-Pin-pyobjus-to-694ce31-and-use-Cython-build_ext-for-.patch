@@ -7,7 +7,7 @@ Pin to commit 694ce31 (last Python 2 compatible commit).
 The iOS code path in setup.py expects a pre-generated pyobjus.c,
 but this file was never shipped in the git repo. Patch setup.py
 to use Cython.Distutils build_ext on iOS (same as macOS path).
-Make Cython available to hostpython via PY2_VENV PYTHONPATH.
+Make Cython available to hostpython via RENPY_DEPS_INSTALL PYTHONPATH.
 ---
  dependencies/scripts/build-pyobjus.sh | 16 +++++++++++++++-
  1 file changed, 15 insertions(+), 1 deletion(-)
@@ -43,9 +43,9 @@ index 0731f90..3756e6c 100755
  
  HOSTPYTHON="$RENIOSDEPROOT/tmp/Python-$PYTHON_VERSION/hostpython"
  
-+# Make Cython available to hostpython via PY2_VENV site-packages
-+if [ -n "$PY2_VENV" ]; then
-+    export PYTHONPATH="$PY2_VENV/lib/python2.7/site-packages${PYTHONPATH:+:$PYTHONPATH}"
++# Make Cython available to hostpython via RENPY_DEPS_INSTALL site-packages
++if [ -n "$RENPY_DEPS_INSTALL" ]; then
++    export PYTHONPATH="$RENPY_DEPS_INSTALL/lib/python2.7/site-packages${PYTHONPATH:+:$PYTHONPATH}"
 +fi
 +
  export KIVYIOSROOT=1

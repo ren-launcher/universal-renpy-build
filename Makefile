@@ -31,10 +31,6 @@ OUTPUT       := $(ROOT)/output
 ANDROID_HOME ?= $(HOME)/Android/Sdk
 ANDROID_NDK  := $(ANDROID_HOME)/ndk/$(ANDROID_NDK_VERSION)
 
-# Python 2 virtualenv (provides `python` command for renpy-deps build scripts)
-PY2_VENV     := $(WORK)/py2-venv
-export PATH := $(PY2_VENV)/bin:$(PATH)
-
 # Makefile internal stamp dir
 STAMPS       := $(WORK)/.stamps
 $(shell mkdir -p $(STAMPS) $(OUTPUT))
@@ -120,22 +116,24 @@ endif
 	@touch $@
 
 # ============================================================================
+# Stage 3b: Install Cython into deps Python 2.7
+# ============================================================================
+
+$(STAMPS)/cython: $(STAMPS)/deps
+	@echo "==> Installing Cython $(CYTHON_VERSION) into deps Python..."
+	. $(DEPS_BUILD)/env.sh && \
+	  ( python -c "import Cython; print('Cython ' + Cython.__version__ + ' already installed')" 2>/dev/null || \
+	  ( curl -fSL -o /tmp/Cython-$(CYTHON_VERSION).tar.gz \
+	      https://files.pythonhosted.org/packages/source/C/Cython/Cython-$(CYTHON_VERSION).tar.gz && \
+	    tar xzf /tmp/Cython-$(CYTHON_VERSION).tar.gz -C /tmp && \
+	    cd /tmp/Cython-$(CYTHON_VERSION) && python setup.py install ) )
+	@touch $@
+
+# ============================================================================
 # Stage 4: Build pygame_sdl2 + Ren'Py C extension modules
 # ============================================================================
 
-$(STAMPS)/modules: $(STAMPS)/deps $(STAMPS)/patched-renpy
-	@echo "==> Bootstrapping pip in deps Python..."
-	. $(DEPS_BUILD)/env.sh && \
-	  python -m ensurepip 2>/dev/null || true
-	@echo "==> Installing Cython into deps Python..."
-	. $(DEPS_BUILD)/env.sh && \
-	  python -m pip install --no-build-isolation "Cython==$(CYTHON_VERSION)" 2>/dev/null || \
-	  ( echo "==> Downloading Cython wheel via system Python 3 (SSL fallback)..." && \
-	    python3 -m pip download --no-deps --dest /tmp/cython-wheel \
-	      "Cython==$(CYTHON_VERSION)" && \
-	    . $(DEPS_BUILD)/env.sh && \
-	    python -m pip install --no-index --find-links /tmp/cython-wheel \
-	      "Cython==$(CYTHON_VERSION)" )
+$(STAMPS)/modules: $(STAMPS)/cython $(STAMPS)/patched-renpy
 	@echo "==> Building pygame_sdl2..."
 	. $(DEPS_BUILD)/env.sh && \
 	  export PYGAME_SDL2_INSTALL_HEADERS=1 && \
@@ -211,14 +209,6 @@ sdk: merge-libs ## Build Ren'Py SDK zip + tar.bz2
 # Stage 7: RAPT native Android .so build (Linux only)
 # ============================================================================
 
-# Cython virtualenv needed by RAPT's cross-compilation
-$(STAMPS)/cython-venv:
-	@echo "==> Setting up Cython virtualenv..."
-	python2 -m virtualenv $(WORK)/cython2-venv 2>/dev/null || \
-	  virtualenv -p python2 $(WORK)/cython2-venv
-	$(WORK)/cython2-venv/bin/pip install "Cython==$(CYTHON_VERSION)"
-	@touch $@
-
 # Install Android NDK via sdkmanager if not present
 $(STAMPS)/android-ndk:
 	@echo "==> Ensuring Android NDK $(ANDROID_NDK_VERSION) is installed..."
@@ -234,9 +224,9 @@ $(STAMPS)/android-ndk:
 	@test -d "$(ANDROID_NDK)" || { echo "ERROR: NDK installation failed"; exit 1; }
 	@touch $@
 
-$(STAMPS)/rapt-native: $(STAMPS)/patched-rapt $(STAMPS)/cython-venv $(STAMPS)/android-ndk
+$(STAMPS)/rapt-native: $(STAMPS)/patched-rapt $(STAMPS)/cython $(STAMPS)/android-ndk
 	@echo "==> Building RAPT native libraries..."
-	export PATH="$(WORK)/cython2-venv/bin:$$PATH" && \
+	. $(DEPS_BUILD)/env.sh && \
 	  export PYGAME_SDL2_ROOT=$(PYGAME_ROOT) && \
 	  export RENPY_ROOT=$(RENPY_ROOT) && \
 	  export ANDROID_HOME=$(ANDROID_HOME) && \
@@ -283,13 +273,13 @@ dist-rapt: $(STAMPS)/rapt-native merge-libs ## Build RAPT DLC zip
 #   Builds Python + SDL2 + FFmpeg etc. for iOS/Simulator via Xcode toolchain.
 # ============================================================================
 
-$(STAMPS)/renios-native: $(STAMPS)/patched-renios $(STAMPS)/patched-renpy
+$(STAMPS)/renios-native: $(STAMPS)/patched-renios $(STAMPS)/patched-renpy $(STAMPS)/cython
 ifeq ($(UNAME_S),Darwin)
 	@echo "==> Building renios native libraries..."
 	export XCODEAPP=$$(xcode-select -p | sed 's|/Contents/Developer||') && \
 	  export RENPY_ROOT=$(RENPY_ROOT) && \
 	  export PYGAME_SDL2_ROOT=$(PYGAME_ROOT) && \
-	  export PY2_VENV=$(PY2_VENV) && \
+	  export RENPY_DEPS_INSTALL=$(DEPS_BUILD)/install && \
 	  cd $(RENIOS_ROOT) && bash build_all.sh
 else
 	@echo "SKIP: renios native build requires macOS with Xcode."
