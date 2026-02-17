@@ -130,8 +130,8 @@ $(STAMPS)/modules: $(STAMPS)/deps $(STAMPS)/patched-renpy
 	@echo "==> Installing Cython into deps Python..."
 	. $(DEPS_BUILD)/env.sh && \
 	  python -m pip install --no-build-isolation "Cython==$(CYTHON_VERSION)" 2>/dev/null || \
-	  ( echo "==> Downloading Cython wheel via system Python (SSL fallback)..." && \
-	    pip download --no-deps --dest /tmp/cython-wheel \
+	  ( echo "==> Downloading Cython wheel via system Python 3 (SSL fallback)..." && \
+	    python3 -m pip download --no-deps --dest /tmp/cython-wheel \
 	      "Cython==$(CYTHON_VERSION)" && \
 	    . $(DEPS_BUILD)/env.sh && \
 	    python -m pip install --no-index --find-links /tmp/cython-wheel \
