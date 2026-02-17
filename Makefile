@@ -33,7 +33,7 @@ ANDROID_NDK  := $(ANDROID_HOME)/ndk/$(ANDROID_NDK_VERSION)
 
 # Python 2 virtualenv (provides `python` command for renpy-deps build scripts)
 PY2_VENV     := $(WORK)/py2-venv
-ACTIVATE_PY2  = . $(PY2_VENV)/bin/activate &&
+export PATH := $(PY2_VENV)/bin:$(PATH)
 
 # Makefile internal stamp dir
 STAMPS       := $(WORK)/.stamps
@@ -108,9 +108,9 @@ $(STAMPS)/deps: $(STAMPS)/patched-renpy-deps
 ifeq ($(UNAME_S),Darwin)
   ifeq ($(UNAME_M),arm64)
 	@echo "==> Building under Rosetta 2 (x86_64) for Apple Silicon..."
-	cd $(DEPS_BUILD) && $(ACTIVATE_PY2) /usr/bin/arch -x86_64 bash $(RENPY_DEPS)/build_mac.sh
+	cd $(DEPS_BUILD) && /usr/bin/arch -x86_64 bash $(RENPY_DEPS)/build_mac.sh
   else
-	cd $(DEPS_BUILD) && $(ACTIVATE_PY2) bash $(RENPY_DEPS)/build_mac.sh
+	cd $(DEPS_BUILD) && bash $(RENPY_DEPS)/build_mac.sh
   endif
 else
 	cd $(DEPS_BUILD) && bash $(RENPY_DEPS)/build_python.sh
@@ -131,7 +131,7 @@ $(STAMPS)/modules: $(STAMPS)/deps $(STAMPS)/patched-renpy
 	. $(DEPS_BUILD)/env.sh && \
 	  python -m pip install --no-build-isolation "Cython==$(CYTHON_VERSION)" 2>/dev/null || \
 	  ( echo "==> Downloading Cython wheel via system Python (SSL fallback)..." && \
-	    $(ACTIVATE_PY2) pip download --no-deps --dest /tmp/cython-wheel \
+	    pip download --no-deps --dest /tmp/cython-wheel \
 	      "Cython==$(CYTHON_VERSION)" && \
 	    . $(DEPS_BUILD)/env.sh && \
 	    python -m pip install --no-index --find-links /tmp/cython-wheel \
@@ -290,7 +290,6 @@ ifeq ($(UNAME_S),Darwin)
 	  export RENPY_ROOT=$(RENPY_ROOT) && \
 	  export PYGAME_SDL2_ROOT=$(PYGAME_ROOT) && \
 	  export PY2_VENV=$(PY2_VENV) && \
-	  export PATH="$(PY2_VENV)/bin:$$PATH" && \
 	  cd $(RENIOS_ROOT) && bash build_all.sh
 else
 	@echo "SKIP: renios native build requires macOS with Xcode."
