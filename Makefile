@@ -126,7 +126,7 @@ $(STAMPS)/cython: $(STAMPS)/deps
 	  ( curl -fSL -o /tmp/Cython-$(CYTHON_VERSION).tar.gz \
 	      https://files.pythonhosted.org/packages/source/C/Cython/Cython-$(CYTHON_VERSION).tar.gz && \
 	    tar xzf /tmp/Cython-$(CYTHON_VERSION).tar.gz -C /tmp && \
-	    cd /tmp/Cython-$(CYTHON_VERSION) && python setup.py install ) )
+	    cd /tmp/Cython-$(CYTHON_VERSION) && python setup.py install --single-version-externally-managed --record /dev/null ) )
 	@touch $@
 
 # ============================================================================
