@@ -47,6 +47,8 @@ jobs:
           mkdir -p "$HOME/.local/bin"
           ln -sf /usr/bin/python2 "$HOME/.local/bin/python"
           echo "$HOME/.local/bin" >> $GITHUB_PATH
+          # Create py2-venv (used by Makefile fallback to download Cython wheel)
+          virtualenv -p python2 work/py2-venv
 
       - name: Cache C dependencies
         uses: actions/cache@v4
