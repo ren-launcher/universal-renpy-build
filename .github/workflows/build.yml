@@ -47,6 +47,21 @@ jobs:
           ln -sf /usr/bin/python2 "$HOME/.local/bin/python"
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
+      - name: Setup ccache
+        run: |
+          echo "/usr/lib/ccache" >> $GITHUB_PATH
+          echo "CCACHE_DIR=${{ github.workspace }}/.ccache" >> $GITHUB_ENV
+          echo "CCACHE_MAXSIZE=500M" >> $GITHUB_ENV
+
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: .ccache
+          key: ccache-linux-${{ hashFiles('config.env') }}-${{ github.sha }}
+          restore-keys: |
+            ccache-linux-${{ hashFiles('config.env') }}-
+            ccache-linux-
+
       - name: Cache C dependencies
         uses: actions/cache@v4
         with:
@@ -58,6 +73,10 @@ jobs:
 
       - name: Build RAPT native
         run: make rapt-native
+
+      - name: Print ccache stats
+        if: always()
+        run: ccache -s
 
       - name: Upload lib/linux-x86_64
         uses: actions/upload-artifact@v4
@@ -97,6 +116,21 @@ jobs:
           # automake: provides aclocal, required by autoreconf
           brew install nasm yasm libtool automake ccache
 
+      - name: Setup ccache
+        run: |
+          echo "$(brew --prefix ccache)/libexec" >> $GITHUB_PATH
+          echo "CCACHE_DIR=${{ github.workspace }}/.ccache" >> $GITHUB_ENV
+          echo "CCACHE_MAXSIZE=500M" >> $GITHUB_ENV
+
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: .ccache
+          key: ccache-mac-${{ hashFiles('config.env') }}-${{ github.sha }}
+          restore-keys: |
+            ccache-mac-${{ hashFiles('config.env') }}-
+            ccache-mac-
+
       - name: Cache C dependencies
         uses: actions/cache@v4
         with:
@@ -106,8 +140,27 @@ jobs:
       - name: Build lib/darwin-x86_64
         run: make lib-only
 
+      - name: Restore renios downloads cache
+        uses: actions/cache/restore@v4
+        with:
+          path: work/renios/dependencies/cache
+          key: renios-downloads-${{ hashFiles('config.env') }}
+          restore-keys: |
+            renios-downloads-
+
       - name: Build renios native
         run: make renios-native
+
+      - name: Save renios downloads cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: work/renios/dependencies/cache
+          key: renios-downloads-${{ hashFiles('config.env') }}-${{ github.run_id }}
+
+      - name: Print ccache stats
+        if: always()
+        run: ccache -s
 
       - name: Upload lib/darwin-x86_64
         uses: actions/upload-artifact@v4
@@ -128,6 +181,9 @@ jobs:
 
   # ════════════════════════════════════════════════════════════════════════
   # Job 3: Package — merge all platform libs and create final distributions
+  #   Fast path: if build-linux succeeded, download pre-built lib artifact
+  #   instead of rebuilding from source (~30-60 min saved).
+  #   Fallback: full build from source when build-linux was skipped.
   # ════════════════════════════════════════════════════════════════════════
   package:
     needs: [build-linux, build-mac]
@@ -146,16 +202,22 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            build-essential ccache patchelf \
-            libgl1-mesa-dev libglu1-mesa-dev \
-            libasound2-dev libpulse-dev \
-            libx11-dev libxext-dev libxrandr-dev libxi-dev libxfixes-dev \
-            libxcursor-dev libxss-dev libxinerama-dev libxxf86vm-dev \
-            libxmu-dev \
-            libdbus-1-dev libudev-dev \
-            python2 python2-dev \
-            xvfb nasm yasm
+          if [ "${{ needs.build-linux.result }}" = "success" ]; then
+            # Fast path: only need python2 for compileall (.pyc generation)
+            sudo apt-get install -y python2
+          else
+            # Fallback: full build toolchain needed
+            sudo apt-get install -y \
+              build-essential ccache patchelf \
+              libgl1-mesa-dev libglu1-mesa-dev \
+              libasound2-dev libpulse-dev \
+              libx11-dev libxext-dev libxrandr-dev libxi-dev libxfixes-dev \
+              libxcursor-dev libxss-dev libxinerama-dev libxxf86vm-dev \
+              libxmu-dev \
+              libdbus-1-dev libudev-dev \
+              python2 python2-dev \
+              xvfb nasm yasm
+          fi
 
       - name: Setup python -> python2
         run: |
@@ -168,24 +230,63 @@ jobs:
           # Export config.env variables to GITHUB_ENV for subsequent steps
           grep -v '^#' config.env | grep '=' >> $GITHUB_ENV
 
-      - name: Cache C dependencies
+      # ── Fast path: reuse pre-built lib from build-linux ──────────────────
+
+      - name: Clone and patch Ren'Py source (fast path)
+        if: needs.build-linux.result == 'success'
+        run: |
+          git clone --depth 1 --branch ${{ env.RENPY_TAG }} \
+            ${{ env.RENPY_REPO }} work/renpy
+          cd work/renpy && git apply ${{ github.workspace }}/patches/renpy/*.patch
+
+      - name: Download pre-built lib/linux-x86_64
+        if: needs.build-linux.result == 'success'
+        uses: actions/download-artifact@v4
+        with:
+          name: lib-linux-x86_64
+          path: work/renpy/lib/linux-x86_64/
+
+      - name: Fix lib permissions
+        if: needs.build-linux.result == 'success'
+        run: |
+          chmod +x work/renpy/lib/linux-x86_64/renpy \
+                   work/renpy/lib/linux-x86_64/pythonw 2>/dev/null || true
+          find work/renpy/lib/linux-x86_64 -name '*.so' -exec chmod +x {} + 2>/dev/null || true
+
+      # ── Fallback: full build from source (when build-linux was skipped) ──
+
+      - name: Cache C dependencies (fallback)
+        if: needs.build-linux.result != 'success'
         uses: actions/cache@v4
         with:
           path: work/linux-x86_64-deps
           key: linux-deps-${{ hashFiles('config.env') }}
 
-      - name: Build local lib/linux-x86_64
+      - name: Build local lib/linux-x86_64 (fallback)
+        if: needs.build-linux.result != 'success'
         run: make lib-only
+
+      # ── Merge darwin libs and build distributions ─────────────────────────
 
       - name: Download lib/darwin-x86_64
         if: needs.build-mac.result == 'success'
         uses: actions/download-artifact@v4
         with:
           name: lib-darwin-x86_64
-          path: extra-libs/darwin-x86_64/
+          path: work/renpy/lib/darwin-x86_64/
 
-      - name: Merge all platform libs and build SDK
-        run: make sdk EXTRA_LIBS=${{ github.workspace }}/extra-libs
+      - name: Build SDK distribution
+        run: |
+          mkdir -p output
+          cd work/renpy
+          printf 'vc_version = %s\n' \
+            "$(echo ${{ env.RENPY_TAG }} | rev | cut -d. -f1 | rev)" \
+            > renpy/vc_version.py
+          SDL_VIDEODRIVER=dummy ./renpy.sh launcher quit
+          SDL_VIDEODRIVER=dummy ./renpy.sh launcher distribute launcher \
+            --package sdk \
+            --destination ${{ github.workspace }}/output \
+            --no-update
 
       - name: Download RAPT artifacts
         if: needs.build-linux.result == 'success'
@@ -203,8 +304,7 @@ jobs:
           cp -a work/rapt-import/buildlib work/renpy/rapt/
           cp -a work/rapt-import/templates work/renpy/rapt/
           cp -a work/rapt-import/project work/renpy/rapt/prototype
-          . work/linux-x86_64-deps/env.sh && \
-            python -m compileall work/renpy/rapt/buildlib/
+          python -m compileall work/renpy/rapt/buildlib/
           cd work/renpy && \
             SDL_VIDEODRIVER=dummy ./renpy.sh launcher distribute launcher \
               --package rapt \
@@ -227,8 +327,7 @@ jobs:
           cp -a work/renios-import/buildlib work/renpy/renios/
           cp -a work/renios-import/prototype work/renpy/renios/prototype
           echo "${{ env.RENPY_VERSION }}" > work/renpy/renios/version.txt
-          . work/linux-x86_64-deps/env.sh && \
-            python -m compileall work/renpy/renios/buildlib/
+          python -m compileall work/renpy/renios/buildlib/
           cd work/renpy && \
             SDL_VIDEODRIVER=dummy ./renpy.sh launcher distribute launcher \
               --package renios \
