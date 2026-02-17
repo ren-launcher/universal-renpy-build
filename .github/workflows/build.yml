@@ -95,7 +95,8 @@ jobs:
           # Install Rosetta 2 for x86_64 builds (deps Python 2.7.10 is x86_64 only)
           softwareupdate --install-rosetta --agree-to-license || true
           # nasm: libjpeg-turbo SIMD; libtool: GNU libtool for autoreconf (AC_PROG_LIBTOOL)
-          brew install nasm yasm libtool ccache
+          # automake: provides aclocal, required by autoreconf
+          brew install nasm yasm libtool automake ccache
 
       - name: Setup Python 2.7
         run: |

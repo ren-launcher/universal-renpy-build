@@ -51,7 +51,7 @@ sudo apt-get install -y \
 
 ```bash
 # Build tools
-brew install nasm yasm libtool coreutils
+brew install nasm yasm libtool automake coreutils
 
 # Python 2.7 (required by Ren'Py 7.x build scripts)
 brew install pyenv
