@@ -222,6 +222,8 @@ $(STAMPS)/android-ndk:
 	  echo "NDK already installed at $(ANDROID_NDK)"; \
 	fi
 	@test -d "$(ANDROID_NDK)" || { echo "ERROR: NDK installation failed"; exit 1; }
+	@test -f "$(ANDROID_NDK)/build/tools/make-standalone-toolchain.sh" || \
+	  { echo "ERROR: NDK $(ANDROID_NDK_VERSION) missing make-standalone-toolchain.sh (requires NDK r19c or earlier)"; exit 1; }
 	@touch $@
 
 $(STAMPS)/rapt-native: $(STAMPS)/patched-rapt $(STAMPS)/cython $(STAMPS)/android-ndk
@@ -231,6 +233,7 @@ $(STAMPS)/rapt-native: $(STAMPS)/patched-rapt $(STAMPS)/cython $(STAMPS)/android
 	  export RENPY_ROOT=$(RENPY_ROOT) && \
 	  export ANDROID_HOME=$(ANDROID_HOME) && \
 	  export ANDROID_NDK=$(ANDROID_NDK) && \
+	  export ANDROID_NDK_ROOT=$(ANDROID_NDK) && \
 	  cd $(RAPT_ROOT)/native && bash build.sh ""
 	@echo "==> Verifying 16K page alignment..."
 	@fail=0; \
