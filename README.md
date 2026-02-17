@@ -43,7 +43,7 @@ sudo apt-get install -y \
   libxcursor-dev libxss-dev libxinerama-dev libxxf86vm-dev \
   libxmu-dev \
   libdbus-1-dev libudev-dev \
-  python2 python2-dev virtualenv \
+  python2 python2-dev \
   nasm yasm
 ```
 
@@ -53,12 +53,6 @@ sudo apt-get install -y \
 # Build tools
 brew install nasm yasm libtool automake coreutils
 
-# Python 2.7 (required by Ren'Py 7.x build scripts)
-brew install pyenv
-pyenv install 2.7.18
-pyenv shell 2.7.18
-python -m virtualenv work/py2-venv
-
 # Xcode with command-line tools (required for renios)
 xcode-select --install
 
@@ -67,6 +61,7 @@ softwareupdate --install-rosetta --agree-to-license
 ```
 
 > **Note**: `ccache` is optional — patches make it a no-op if absent.
+> Python 2.7 is built from source by renpy-deps — no need to install it separately.
 > The build runs under Rosetta 2 on Apple Silicon for the deps stage;
 > renios cross-compiles natively for arm64 iOS / x86_64 Simulator.
 
@@ -118,12 +113,13 @@ make all (Linux)
   ├─ patched-renios git am patches/renios/*.patch
   │
   ├─ deps           build_python.sh + build.sh -> C dependency libraries
+  ├─ cython         Install Cython into deps Python 2.7
   ├─ modules        pygame_sdl2 + renpy/module -> Python extensions
   ├─ lib            renpython/build.py + merge.py -> lib/linux-x86_64/
   ├─ merge-libs     (optional) import lib/ from other platforms
   ├─ sdk            ./renpy.sh launcher distribute -> SDK zip
   │
-  ├─ cython-venv    Python 2 + Cython virtualenv
+  ├─ cython         Install Cython into deps Python 2.7
   ├─ rapt-native    native/build.sh -> Android .so (16K aligned)
   └─ dist-rapt      inject rapt -> distribute -> RAPT DLC zip
 
@@ -177,7 +173,7 @@ The GitHub Actions workflow at `.github/workflows/build.yml` uses a multi-runner
 | Job           | Runner          | Produces                                            |
 | ------------- | --------------- | --------------------------------------------------- |
 | `build-linux` | `ubuntu-22.04`  | `lib/linux-x86_64/` + RAPT native `.so`             |
-| `build-mac`   | `macos-13`      | `lib/darwin-x86_64/` + renios native libs           |
+| `build-mac`   | `macos-14`      | `lib/darwin-x86_64/` + renios native libs           |
 | `package`     | `ubuntu-22.04`  | Merges all libs, builds SDK + RAPT DLC + renios DLC |
 | `release`     | `ubuntu-latest` | Creates GitHub Release from tag                     |
 

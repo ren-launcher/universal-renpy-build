@@ -17,7 +17,7 @@ index 5f8a7fc..22bcb8b 100755
  
  # libffi needs to use "-miphoneos-version-min=6.0" for xcode 6+ to compile it correctly
  sed -i.bak s/-miphoneos-version-min=5.1.1/-miphoneos-version-min=6.0/g generate-darwin-source-and-headers.py
-+# Fix /usr/bin/python (removed in modern macOS) -> use PATH python (py2-venv)
++# Fix /usr/bin/python (removed in modern macOS) -> use PATH python (deps)
 +sed -i.bak 's|/usr/bin/python |python |g' libffi.xcodeproj/project.pbxproj
 +# Fix deployment target for modern SDK (minimum 12.0 required)
 +sed -i.bak 's/IPHONEOS_DEPLOYMENT_TARGET = 5.0/IPHONEOS_DEPLOYMENT_TARGET = 12.0/g' libffi.xcodeproj/project.pbxproj

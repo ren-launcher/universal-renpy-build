@@ -39,13 +39,13 @@ jobs:
             libxmu-dev \
             libdbus-1-dev libudev-dev \
             python2 python2-dev \
-            virtualenv \
             xvfb nasm yasm
 
-      - name: Setup Python 2 virtualenv
+      - name: Setup python -> python2
         run: |
-          virtualenv -p python2 work/py2-venv
-          echo "${{ github.workspace }}/work/py2-venv/bin" >> $GITHUB_PATH
+          mkdir -p "$HOME/.local/bin"
+          ln -sf /usr/bin/python2 "$HOME/.local/bin/python"
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Cache C dependencies
         uses: actions/cache@v4
@@ -97,19 +97,6 @@ jobs:
           # automake: provides aclocal, required by autoreconf
           brew install nasm yasm libtool automake ccache
 
-      - name: Setup Python 2.7
-        run: |
-          # Ren'Py 7.x build scripts require Python 2
-          brew install pyenv
-          eval "$(pyenv init -)"
-          pyenv install 2.7.18
-          pyenv shell 2.7.18
-          pip install virtualenv
-          python -m virtualenv work/py2-venv
-          echo "PYENV_ROOT=$HOME/.pyenv" >> $GITHUB_ENV
-          echo "$HOME/.pyenv/bin" >> $GITHUB_PATH
-          echo "$HOME/.pyenv/shims" >> $GITHUB_PATH
-
       - name: Cache C dependencies
         uses: actions/cache@v4
         with:
@@ -117,10 +104,7 @@ jobs:
           key: mac-deps-${{ hashFiles('config.env') }}
 
       - name: Build lib/darwin-x86_64
-        run: |
-          eval "$(pyenv init -)"
-          pyenv shell 2.7.18
-          make lib-only
+        run: make lib-only
 
       - name: Build renios native
         run: make renios-native
@@ -171,7 +155,6 @@ jobs:
             libxmu-dev \
             libdbus-1-dev libudev-dev \
             python2 python2-dev \
-            virtualenv \
             xvfb nasm yasm
 
       - name: Setup python -> python2
