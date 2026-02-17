@@ -280,6 +280,7 @@ ifeq ($(UNAME_S),Darwin)
 	  export RENPY_ROOT=$(RENPY_ROOT) && \
 	  export PYGAME_SDL2_ROOT=$(PYGAME_ROOT) && \
 	  export RENPY_DEPS_INSTALL=$(DEPS_BUILD)/install && \
+	  export PATH="$(DEPS_BUILD)/install/bin:$$PATH" && \
 	  cd $(RENIOS_ROOT) && bash build_all.sh
 else
 	@echo "SKIP: renios native build requires macOS with Xcode."
