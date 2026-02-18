@@ -37,7 +37,7 @@ output/                         ← final artifacts
 ```bash
 sudo apt-get install -y \
     git build-essential ccache curl unzip autoconf \
-    python-dev-is-python2 python3-dev python3-jinja2 \
+    python3-dev python3-jinja2 \
     libssl-dev libbz2-dev
 ```
 

@@ -13,8 +13,10 @@ echo "==> Installing core build tools..."
 apt-get update
 apt-get install -y git build-essential ccache curl unzip
 
-# Python 2 dev headers (needed for host python build)
-apt-get install -y python-dev-is-python2 python3-dev
+# Python 3 dev headers
+# Note: python-dev-is-python2 is unavailable on Ubuntu 24.04+.
+# Not needed — renpy-build compiles Python 2.7.18 from source.
+apt-get install -y python3-dev
 
 # Python 3 jinja2 (needed by renpy-build itself)
 apt-get install -y python3-jinja2
