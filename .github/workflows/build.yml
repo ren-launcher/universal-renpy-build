@@ -5,258 +5,78 @@ on:
     tags: ["v*"]
   workflow_dispatch:
     inputs:
-      target:
-        description: "Build targets to run"
-        default: "all"
-        type: choice
-        options:
-          - all
-          - linux-only
-          - mac-only
+      platforms:
+        description: "Platforms to build (comma-separated, or empty for all)"
+        default: "linux"
+        type: string
+      archs:
+        description: "Architectures to build (comma-separated, or empty for all)"
+        default: "x86_64"
+        type: string
 
 jobs:
   # ════════════════════════════════════════════════════════════════════════
-  # Job 1: Linux — build lib/linux-x86_64 + RAPT native .so
+  # Build via upstream renpy-build
   # ════════════════════════════════════════════════════════════════════════
-  build-linux:
-    if: inputs.target != 'mac-only'
+  build:
     runs-on: ubuntu-22.04
-    timeout-minutes: 180
+    timeout-minutes: 360
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            build-essential ccache patchelf \
-            libgl1-mesa-dev libglu1-mesa-dev \
-            libasound2-dev libpulse-dev \
-            libx11-dev libxext-dev libxrandr-dev libxi-dev libxfixes-dev \
-            libxcursor-dev libxss-dev libxinerama-dev libxxf86vm-dev \
-            libxmu-dev \
-            libdbus-1-dev libudev-dev \
-            python2 python2-dev \
-            xvfb nasm yasm
+        run: sudo ./scripts/prepare-linux.sh
 
-      - name: Setup python -> python2
-        run: |
-          mkdir -p "$HOME/.local/bin"
-          ln -sf /usr/bin/python2 "$HOME/.local/bin/python"
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
+      - name: Check prerequisites
+        run: make check-env
 
-      - name: Cache C dependencies
-        uses: actions/cache@v4
-        with:
-          path: work/linux-x86_64-deps
-          key: linux-deps-${{ hashFiles('config.env') }}
+      - name: Clone sources
+        run: make clone
 
-      - name: Build lib/linux-x86_64
-        run: make lib-only
+      - name: Apply patches
+        run: make patch
 
-      - name: Cache Android SDK/NDK
+      - name: Download source tarballs
+        run: make tars
+
+      - name: Cache build artifacts
         uses: actions/cache@v4
         with:
           path: |
-            ~/Android/Sdk/ndk
-            ~/Android/Sdk/build-tools
-            ~/Android/Sdk/platforms
-          key: android-sdk-${{ hashFiles('config.env') }}
+            work/tmp/host
+            work/tmp/cross.*
+            work/tmp/sysroot.*
+            work/tmp/complete
+          key: build-${{ hashFiles('config.env', 'patches/**') }}-${{ github.sha }}
+          restore-keys: |
+            build-${{ hashFiles('config.env', 'patches/**') }}-
 
-      - name: Build RAPT native
-        run: make rapt-native
-
-      - name: Upload lib/linux-x86_64
-        uses: actions/upload-artifact@v4
-        with:
-          name: lib-linux-x86_64
-          path: work/renpy/lib/linux-x86_64/
-          if-no-files-found: error
-
-      - name: Upload RAPT artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: rapt-artifacts
-          path: |
-            work/rapt/android.py
-            work/rapt/buildlib/
-            work/rapt/templates/
-            work/rapt/project/
-          if-no-files-found: error
-
-  # ════════════════════════════════════════════════════════════════════════
-  # Job 2: macOS — build lib/darwin-x86_64 + renios native
-  # ════════════════════════════════════════════════════════════════════════
-  build-mac:
-    if: inputs.target != 'linux-only'
-    runs-on: macos-14
-    timeout-minutes: 240
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install system dependencies
+      - name: Build
         run: |
-          # Install Rosetta 2 for x86_64 builds (deps Python 2.7.10 is x86_64 only)
-          softwareupdate --install-rosetta --agree-to-license || true
-          # nasm: libjpeg-turbo SIMD; libtool: GNU libtool for autoreconf (AC_PROG_LIBTOOL)
-          # automake: provides aclocal, required by autoreconf
-          brew install nasm yasm libtool automake ccache
+          BUILD_PLATFORMS="${{ github.event.inputs.platforms || '' }}"
+          BUILD_ARCHS="${{ github.event.inputs.archs || '' }}"
+          make build \
+            ${BUILD_PLATFORMS:+BUILD_PLATFORMS=$BUILD_PLATFORMS} \
+            ${BUILD_ARCHS:+BUILD_ARCHS=$BUILD_ARCHS}
 
-      - name: Cache C dependencies
-        uses: actions/cache@v4
-        with:
-          path: work/darwin-x86_64-deps
-          key: mac-deps-${{ hashFiles('config.env') }}
+      - name: Package distribution
+        run: make dist
 
-      - name: Build lib/darwin-x86_64
-        run: make lib-only
-
-      - name: Build renios native
-        run: make renios-native
-
-      - name: Upload lib/darwin-x86_64
-        uses: actions/upload-artifact@v4
-        with:
-          name: lib-darwin-x86_64
-          path: work/renpy/lib/darwin-x86_64/
-          if-no-files-found: error
-
-      - name: Upload renios artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: renios-artifacts
-          path: |
-            work/renios/ios.py
-            work/renios/buildlib/
-            work/renios/prototype/
-          if-no-files-found: error
-
-  # ════════════════════════════════════════════════════════════════════════
-  # Job 3: Package — merge all platform libs and create final distributions
-  # ════════════════════════════════════════════════════════════════════════
-  package:
-    needs: [build-linux, build-mac]
-    if: |
-      always() &&
-      (needs.build-linux.result == 'success' || needs.build-linux.result == 'skipped') &&
-      (needs.build-mac.result == 'success' || needs.build-mac.result == 'skipped') &&
-      (needs.build-linux.result == 'success' || needs.build-mac.result == 'success')
-    runs-on: ubuntu-22.04
-    timeout-minutes: 60
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            build-essential ccache patchelf \
-            libgl1-mesa-dev libglu1-mesa-dev \
-            libasound2-dev libpulse-dev \
-            libx11-dev libxext-dev libxrandr-dev libxi-dev libxfixes-dev \
-            libxcursor-dev libxss-dev libxinerama-dev libxxf86vm-dev \
-            libxmu-dev \
-            libdbus-1-dev libudev-dev \
-            python2 python2-dev \
-            xvfb nasm yasm
-
-      - name: Setup python -> python2
-        run: |
-          mkdir -p "$HOME/.local/bin"
-          ln -sf /usr/bin/python2 "$HOME/.local/bin/python"
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-      - name: Load config.env
-        run: |
-          # Export config.env variables to GITHUB_ENV for subsequent steps
-          grep -v '^#' config.env | grep '=' >> $GITHUB_ENV
-
-      - name: Cache C dependencies
-        uses: actions/cache@v4
-        with:
-          path: work/linux-x86_64-deps
-          key: linux-deps-${{ hashFiles('config.env') }}
-
-      - name: Build local lib/linux-x86_64
-        run: make lib-only
-
-      - name: Download lib/darwin-x86_64
-        if: needs.build-mac.result == 'success'
-        uses: actions/download-artifact@v4
-        with:
-          name: lib-darwin-x86_64
-          path: extra-libs/darwin-x86_64/
-
-      - name: Merge all platform libs and build SDK
-        run: make sdk EXTRA_LIBS=${{ github.workspace }}/extra-libs
-
-      - name: Download RAPT artifacts
-        if: needs.build-linux.result == 'success'
-        uses: actions/download-artifact@v4
-        with:
-          name: rapt-artifacts
-          path: work/rapt-import/
-
-      - name: Build RAPT DLC
-        if: needs.build-linux.result == 'success'
-        run: |
-          mkdir -p output
-          mkdir -p work/renpy/rapt
-          cp -a work/rapt-import/android.py work/renpy/rapt/
-          cp -a work/rapt-import/buildlib work/renpy/rapt/
-          cp -a work/rapt-import/templates work/renpy/rapt/
-          cp -a work/rapt-import/project work/renpy/rapt/prototype
-          . work/linux-x86_64-deps/env.sh && \
-            python -m compileall work/renpy/rapt/buildlib/
-          cd work/renpy && \
-            SDL_VIDEODRIVER=dummy ./renpy.sh launcher distribute launcher \
-              --package rapt \
-              --destination ${{ github.workspace }}/output \
-              --no-update
-
-      - name: Download renios artifacts
-        if: needs.build-mac.result == 'success'
-        uses: actions/download-artifact@v4
-        with:
-          name: renios-artifacts
-          path: work/renios-import/
-
-      - name: Build renios DLC
-        if: needs.build-mac.result == 'success'
-        run: |
-          mkdir -p output
-          mkdir -p work/renpy/renios
-          cp -a work/renios-import/ios.py work/renpy/renios/
-          cp -a work/renios-import/buildlib work/renpy/renios/
-          cp -a work/renios-import/prototype work/renpy/renios/prototype
-          echo "${{ env.RENPY_VERSION }}" > work/renpy/renios/version.txt
-          . work/linux-x86_64-deps/env.sh && \
-            python -m compileall work/renpy/renios/buildlib/
-          cd work/renpy && \
-            SDL_VIDEODRIVER=dummy ./renpy.sh launcher distribute launcher \
-              --package renios \
-              --destination ${{ github.workspace }}/output \
-              --no-update
-
-      - name: Upload final distribution
+      - name: Upload distribution
         uses: actions/upload-artifact@v4
         with:
           name: renpy-dist
           path: output/
-          if-no-files-found: error
+          if-no-files-found: warn
 
   # ════════════════════════════════════════════════════════════════════════
-  # Job 4: Release — create GitHub release from tag
+  # Release — create GitHub release from tag
   # ════════════════════════════════════════════════════════════════════════
   release:
     if: startsWith(github.ref, 'refs/tags/')
-    needs: package
+    needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: write

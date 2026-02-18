@@ -1,3 +1,14 @@
-/work
-/output
+# Build artifacts
+/work/
+/output/
+
+# Logs
 /*.log
+
+# macOS
+.DS_Store
+
+# Editor
+*.swp
+*.swo
+*~
