@@ -1,0 +1,13 @@
+diff --git a/distribute.py b/distribute.py
+index 1a8addb..c52a2a3 100755
+--- a/distribute.py
++++ b/distribute.py
+@@ -78,7 +78,7 @@ def main():
+ 
+     match_version = ".".join(str(i) for i in renpy.version_tuple[:2]) # @UndefinedVariable
+ 
+-    s = subprocess.check_output([ "git", "describe", "--tags", "--dirty", "--match", "start-" + match_version ])
++    s = os.environ.get("RENPY_GIT_DESCRIBE") or subprocess.check_output([ "git", "describe", "--tags", "--dirty", "--match", "start-" + match_version ])
+     parts = s.strip().split("-")
+ 
+     if len(parts) <= 3:

@@ -1,0 +1,60 @@
+diff --git a/renpybuild/model.py b/renpybuild/model.py
+index 64edda0..8e3f1c8 100644
+--- a/renpybuild/model.py
++++ b/renpybuild/model.py
+@@ -13,8 +13,12 @@ import renpybuild.run
+ old_copytree = shutil.copytree
+ 
+ 
+-def copytree(*args, ignore_dangling_symlinks=True, **kwargs):
+-    return old_copytree(*args, ignore_dangling_symlinks=ignore_dangling_symlinks, **kwargs)
++def copytree(*args, **kwargs):
++    # ignore_dangling_symlinks is the 6th param (index 5) of shutil.copytree.
++    # Only inject it when it is not already supplied positionally or by keyword.
++    if len(args) < 6 and 'ignore_dangling_symlinks' not in kwargs:
++        kwargs['ignore_dangling_symlinks'] = True
++    return old_copytree(*args, **kwargs)
+ 
+ 
+ shutil.copytree = copytree
+diff --git a/tasks/sdl2.py b/tasks/sdl2.py
+index 1fae2cd..7dbe4b6 100644
+--- a/tasks/sdl2.py
++++ b/tasks/sdl2.py
+@@ -53,6 +53,10 @@ def build(c):
+         --disable-render-metal
+         --disable-jack
+ 
++    {% if c.platform == "linux" %}
++        --disable-video-wayland
++    {% endif %}
++
+     {% if c.platform == "android" %}
+         --disable-video-wayland
+         --disable-video-x11
+diff --git a/tasks/sysroot.py b/tasks/sysroot.py
+index 789f873..d2ca833 100644
+--- a/tasks/sysroot.py
++++ b/tasks/sysroot.py
+@@ -75,7 +75,6 @@ RASPI_PACKAGES = [
+     'libxxf86vm-dev',
+     'libxss-dev',
+     'libgl1-mesa-dev',
+-    'libesd0-dev',
+     'libdbus-1-dev',
+     'libudev-dev',
+     'libgles2-mesa-dev',
+@@ -105,11 +104,11 @@ def install(c):
+         --cache-dir={{ tmp }}/debs
+         --variant=minbase
+         --include={{ packages }}
+-        --components=main,contrib,firmware,rpi
++        --components=main,contrib
+         --arch armhf
+         buster
+         {{ sysroot }}
+-        http://archive.raspbian.org/raspbian
++        http://archive.debian.org/debian
+         """)
+ 
+         c.run("""sudo cp /usr/bin/qemu-arm-static {{ sysroot }}/usr/bin """)

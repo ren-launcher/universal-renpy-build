@@ -8,7 +8,11 @@
 # Usage: download-tars.sh <renpy-build-root>
 set -euo pipefail
 
-BUILD_ROOT="${1:?Usage: download-tars.sh <renpy-build-root>}"
+BUILD_ROOT="${1:?Usage: download-tars.sh <renpy-build-root> [--android-only]}"
+ANDROID_ONLY=0
+if [ "${2:-}" = "--android-only" ]; then
+    ANDROID_ONLY=1
+fi
 SOURCE_DIR="$BUILD_ROOT/source"
 
 mkdir -p "$SOURCE_DIR"
@@ -67,6 +71,48 @@ ZSYNC_SRC="$BUILD_ROOT/patches/zsync-0.6.2.tar.bz2"
 ZSYNC_DST="$SOURCE_DIR/zsync-0.6.2.tar.bz2"
 if [ -f "$ZSYNC_SRC" ] && [ ! -f "$ZSYNC_DST" ]; then
     cp "$ZSYNC_SRC" "$ZSYNC_DST"
+fi
+
+# ── Toolchain tarballs (tars/ directory) ────────────────────────────────────
+# These are large GNU/SDK tarballs needed by tasks/toolchain.py.
+# Upstream expects them in renpy-build/tars/ (not source/).
+TARS_DIR="$BUILD_ROOT/tars"
+mkdir -p "$TARS_DIR"
+
+declare -A TOOLCHAIN_TARBALLS=(
+    ["android-ndk-r21d-linux-x86_64.zip"]="https://dl.google.com/android/repository/android-ndk-r21d-linux-x86_64.zip"
+)
+
+# Cross-compilation toolchains (not needed for Android-only builds)
+if [ "$ANDROID_ONLY" -eq 0 ]; then
+    TOOLCHAIN_TARBALLS+=(
+        ["binutils-2.33.1.tar.gz"]="https://ftp.gnu.org/gnu/binutils/binutils-2.33.1.tar.gz"
+        ["gcc-9.2.0.tar.gz"]="https://ftp.gnu.org/gnu/gcc/gcc-9.2.0/gcc-9.2.0.tar.gz"
+    )
+fi
+
+for name in "${!TOOLCHAIN_TARBALLS[@]}"; do
+    target="$TARS_DIR/$name"
+    if [ -f "$target" ]; then
+        echo "  [ok] $name (tars/)"
+        continue
+    fi
+
+    url="${TOOLCHAIN_TARBALLS[$name]}"
+    echo "  [dl] $name <- $url"
+    if ! curl -fSL --retry 3 --retry-delay 5 -o "$target.tmp" "$url"; then
+        echo "  [FAIL] Could not download $name"
+        rm -f "$target.tmp"
+        FAIL=1
+        continue
+    fi
+    mv "$target.tmp" "$target"
+done
+
+if [ "$FAIL" -ne 0 ]; then
+    echo ""
+    echo "ERROR: Some toolchain tarballs failed to download. Check URLs and retry."
+    exit 1
 fi
 
 echo ""

@@ -31,9 +31,11 @@ if [ ! -e pygame_sdl2 ] && [ ! -L pygame_sdl2 ]; then
     ln -s "$PYGAME_SRC" pygame_sdl2
 fi
 
-# Write vc_version.py
+# Write vc_version.py and set RENPY_GIT_DESCRIBE to bypass git describe
+# in distribute.py (shallow clones lack the start-* tags it expects)
 VC_VERSION=$(echo "$TAG" | rev | cut -d. -f1 | rev)
 printf "vc_version = %s\n" "$VC_VERSION" > renpy/vc_version.py
+export RENPY_GIT_DESCRIBE="start-${VERSION%.*}-${VC_VERSION}-g$(git rev-parse --short HEAD)"
 
 # Set up environment — use the host python built by renpy-build
 HOST_PYTHON="$TMP/host/bin/python2"
@@ -58,8 +60,13 @@ echo "==> Pre-generating caches..."
 echo "==> Building SDK distribution..."
 ./lib/linux-x86_64/python -O distribute.py "$VERSION" \
     --pygame "$PYGAME_SRC" \
-    --destination "$OUTPUT" \
-    --no-update
+    --fast \
+    --nosign
+
+# Move output to the target directory
+if [ -d "dl/$VERSION" ]; then
+    cp -a dl/"$VERSION"/* "$OUTPUT/" 2>/dev/null || true
+fi
 
 echo ""
 echo "==> Distribution built in $OUTPUT/"

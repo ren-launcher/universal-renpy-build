@@ -1,0 +1,28 @@
+diff --git a/renpybuild/run.py b/renpybuild/run.py
+index 4a00fe3..834c091 100644
+--- a/renpybuild/run.py
++++ b/renpybuild/run.py
+@@ -222,6 +222,7 @@ def build_environment(c):
+         c.env("NM", "{{ crossbin}}nm")
+ 
+         c.env("CFLAGS", "{{ CFLAGS }} -DSDL_MAIN_HANDLED")
++        c.env("LDFLAGS", "{{ LDFLAGS }} -Wl,-z,max-page-size=16384")
+ 
+     elif (c.platform == "android") and (c.arch == "arm64_v8a"):
+ 
+@@ -238,6 +239,7 @@ def build_environment(c):
+         c.env("NM", "{{ crossbin}}nm")
+ 
+         c.env("CFLAGS", "{{ CFLAGS }} -DSDL_MAIN_HANDLED")
++        c.env("LDFLAGS", "{{ LDFLAGS }} -Wl,-z,max-page-size=16384")
+ 
+     elif (c.platform == "android") and (c.arch == "armeabi_v7a"):
+ 
+@@ -254,6 +256,7 @@ def build_environment(c):
+         c.env("NM", "{{ crossbin}}nm")
+ 
+         c.env("CFLAGS", "{{ CFLAGS }} -DSDL_MAIN_HANDLED")
++        c.env("LDFLAGS", "{{ LDFLAGS }} -Wl,-z,max-page-size=16384")
+ 
+     elif (c.platform == "ios") and (c.arch == "arm64"):
+ 

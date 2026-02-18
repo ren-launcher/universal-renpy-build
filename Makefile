@@ -38,9 +38,19 @@ ifneq ($(BUILD_PYTHONS),)
 BUILD_ARGS += --python $(BUILD_PYTHONS)
 endif
 
+# ── RAPT-specific build arguments (always Android + Python 2) ──────────────
+RAPT_ARGS := --tmp $(TMP) --pygame_sdl2 $(PYGAME_SRC) --renpy $(RENPY_SRC) \
+             --platform android --python 2
+
+# ── All known platform-arch combinations ───────────────────────────────────
+ALL_PLATFORM_ARCHS := linux-x86_64 linux-i686 linux-aarch64 \
+                      android-x86_64 android-arm64_v8a android-armeabi_v7a \
+                      mac-x86_64 ios-arm64 ios-x86_64 \
+                      windows-x86_64 windows-i686
+
 # ── Phony targets ──────────────────────────────────────────────────────────
 .PHONY: all build dist rebuild clean clean-build help \
-        clone patch tars setup check-env
+        clone patch tars setup check-env rapt dist-rapt tars-android
 
 # Default target
 all: build dist ## Full build: deps + modules + distribution
@@ -148,6 +158,12 @@ setup: patch tars ## Prepare build environment (after clone + patch)
 # ============================================================================
 
 $(STAMPS)/built: $(STAMPS)/patched-renpy-build $(STAMPS)/patched-renpy $(STAMPS)/patched-pygame $(STAMPS)/tars
+	@echo "==> Preparing Live2D Cubism stub header..."
+	@for pa in $(ALL_PLATFORM_ARCHS); do \
+		mkdir -p "$(TMP)/install.$$pa/cubism/Core/include"; \
+		cp -n "$(ROOT)/stubs/Live2DCubismCore.h" \
+		      "$(TMP)/install.$$pa/cubism/Core/include/" 2>/dev/null || true; \
+	done
 	@echo "==> Running renpy-build build.py..."
 	cd $(BUILD_ROOT) && python3 build.py $(BUILD_ARGS) build
 	@touch $@
@@ -166,11 +182,49 @@ dist: $(STAMPS)/built ## Package SDK + DLCs
 		"$(OUTPUT)"
 
 # ============================================================================
+# RAPT (Android) — streamlined build + package
+# ============================================================================
+
+ANDROID_ARCHS := android-x86_64 android-arm64_v8a android-armeabi_v7a
+
+$(STAMPS)/tars-android: $(STAMPS)/patched-renpy-build
+	@echo "==> Downloading source tarballs (Android only)..."
+	$(ROOT)/scripts/download-tars.sh $(BUILD_ROOT) --android-only
+	@touch $@
+
+tars-android: $(STAMPS)/tars-android ## Download tarballs (Android only, skip binutils/gcc)
+
+$(STAMPS)/built-rapt: $(STAMPS)/patched-renpy-build $(STAMPS)/patched-renpy $(STAMPS)/patched-pygame $(STAMPS)/tars-android
+	@echo "==> Preparing Live2D Cubism stub header..."
+	@for pa in $(ANDROID_ARCHS); do \
+		mkdir -p "$(TMP)/install.$$pa/cubism/Core/include"; \
+		cp -n "$(ROOT)/stubs/Live2DCubismCore.h" \
+		      "$(TMP)/install.$$pa/cubism/Core/include/" 2>/dev/null || true; \
+	done
+	@echo "==> Building RAPT (Android)..."
+	cd $(BUILD_ROOT) && python3 build.py $(RAPT_ARGS) build
+	@touch $@
+
+rapt: $(STAMPS)/built-rapt ## Build RAPT (Android only)
+
+dist-rapt: $(STAMPS)/built-rapt ## Package RAPT DLC
+	@echo "==> Packaging RAPT DLC..."
+	$(ROOT)/scripts/distribute-rapt.sh \
+		"$(RENPY_SRC)" "$(PYGAME_SRC)" "$(BUILD_ROOT)" "$(TMP)" \
+		"$(RENPY_VERSION)" "$(RENPY_TAG)" \
+		"$(OUTPUT)"
+
+# ============================================================================
 # Rebuild specific tasks (pass TASKS="taskname")
 # ============================================================================
 
 TASKS ?=
 rebuild: patch ## Rebuild specific tasks: make rebuild TASKS="renpython librenpy"
+	@for pa in $(ALL_PLATFORM_ARCHS); do \
+		mkdir -p "$(TMP)/install.$$pa/cubism/Core/include"; \
+		cp -n "$(ROOT)/stubs/Live2DCubismCore.h" \
+		      "$(TMP)/install.$$pa/cubism/Core/include/" 2>/dev/null || true; \
+	done
 	cd $(BUILD_ROOT) && python3 build.py $(BUILD_ARGS) rebuild $(TASKS)
 
 # ============================================================================
