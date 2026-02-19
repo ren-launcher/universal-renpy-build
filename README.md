@@ -1,204 +1,125 @@
 # Universal Ren'Py Build
 
-Build the complete Ren'Py 7.3.5 distribution (SDK + RAPT Android DLC + renios iOS DLC) entirely from source, with no prebuilt downloads. Supports multi-platform builds via CI (Linux x86_64 + macOS x86_64).
+Build [Ren'Py](https://github.com/renpy/renpy) RAPT (Android Packaging Tool) from source with **16K page alignment** support for Google Play. Wraps the upstream [renpy-build](https://github.com/renpy/renpy-build) system with patches applied on top.
 
-## Architecture
+## Features
+
+- **16K page alignment** — Android `.so` files use `max-page-size=16384`, compliant with Google Play requirements
+- **3 ABIs** — arm64-v8a, armeabi-v7a, x86_64
+- **Official packaging** — uses Ren'Py's own `distribute.py` to produce the RAPT DLC zip
+- **CI-ready** — GitHub Actions workflow; push a tag to build and publish to Releases
+
+## Project Structure
 
 ```
-Makefile                        <- single orchestration entry point
-    │
-    └─ work/
-        ├─ renpy-deps/          <- upstream: C dependency builds (Python 2.7, SDL2, FFmpeg, ...)
-        │   ├─ build_python.sh      Python + zlib + bz2 + openssl
-        │   ├─ build.sh             SDL2/image/ttf/mixer + freetype + ffmpeg + glew
-        │   ├─ build_mac.sh         macOS wrapper (MACOSX_DEPLOYMENT_TARGET=10.6)
-        │   └─ renpython/           PyInstaller packaging -> lib/<platform>/
-        │
-        ├─ renpy/               <- upstream: Ren'Py engine source
-        │   ├─ module/              C extension modules (Cython -> .so)
-        │   └─ launcher/            distribute system -> SDK/DLC zips
-        │
-        ├─ rapt/                <- upstream: Android packaging tool
-        │   └─ native/build.sh      NDK cross-compile -> ARM .so
-        │
-        ├─ renios/              <- upstream: iOS packaging tool
-        │   ├─ build_all.sh         Xcode cross-compile -> iOS/Simulator libs
-        │   └─ prototype/           Xcode project template
-        │
-        └─ pygame_sdl2/         <- upstream: SDL2 Python bindings
+config.env                      ← version configuration (edit to switch Ren'Py version)
+Makefile                        ← build entry point
+scripts/
+    prepare-linux.sh            ← system dependency installation (all platforms)
+    download-tars.sh            ← download source tarballs
+    distribute.sh               ← package full SDK + DLCs
+    distribute-rapt.sh          ← package RAPT DLC only
+    check-env.sh                ← verify build prerequisites
+patches/
+    renpy-build/                ← patches for renpy-build
+    renpy/                      ← patches for renpy engine
+    pygame_sdl2/                ← patches for pygame_sdl2
+stubs/
+    Live2DCubismCore.h          ← minimal Live2D header stub
+work/                           ← build workspace (git-ignored)
+output/                         ← final artifacts
 ```
 
-## Quick Start
+## Quick Start — Build RAPT
 
-### System Dependencies
-
-**Linux (Ubuntu/Debian)**:
+### Prerequisites (Ubuntu 22.04)
 
 ```bash
 sudo apt-get install -y \
-  build-essential ccache patchelf \
-  libgl1-mesa-dev libglu1-mesa-dev \
-  libasound2-dev libpulse-dev \
-  libx11-dev libxext-dev libxrandr-dev libxi-dev libxfixes-dev \
-  libxcursor-dev libxss-dev libxinerama-dev libxxf86vm-dev \
-  libxmu-dev \
-  libdbus-1-dev libudev-dev \
-  python2 python2-dev \
-  nasm yasm
+    git build-essential ccache curl unzip autoconf \
+    python3-dev python3-jinja2 \
+    libssl-dev libbz2-dev
 ```
 
-**macOS (Apple Silicon / arm64)**:
+### Build & Package
 
 ```bash
-# Build tools
-brew install nasm yasm libtool automake coreutils
+make clone        # clone renpy-build, renpy, pygame_sdl2
+make patch        # apply patches
+make tars-android # download source tarballs (Android only)
+make rapt         # build for all 3 Android ABIs
+make dist-rapt    # package RAPT DLC via official tooling
 
-# Xcode with command-line tools (required for renios)
-xcode-select --install
-
-# Rosetta 2 (required on Apple Silicon — deps Python 2.7.10 is x86_64 only)
-softwareupdate --install-rosetta --agree-to-license
+ls output/        # renpy-<VERSION>-rapt.zip
 ```
 
-> **Note**: `ccache` is optional — patches make it a no-op if absent.
-> Python 2.7 is built from source by renpy-deps — no need to install it separately.
-> The build runs under Rosetta 2 on Apple Silicon for the deps stage;
-> renios cross-compiles natively for arm64 iOS / x86_64 Simulator.
+### CI / GitHub Actions
 
-### Build
+Push a tag to trigger the workflow and publish to Releases:
 
 ```bash
-# Linux: builds SDK (linux-x86_64) + RAPT DLC
-make all
-
-# macOS: builds SDK (darwin-x86_64) + renios DLC
-make all
-
-# Individual targets
-make sdk              # SDK only
-make lib-only         # lib/<platform> only (for CI)
-make dist-rapt        # RAPT DLC only (Linux)
-make dist-renios      # renios DLC only (macOS)
-make rapt-native      # RAPT native .so only
-make renios-native    # renios native libs only
+git tag v<VERSION>
+git push origin v<VERSION>
 ```
 
-Output goes to `output/`.
+Or trigger manually from the Actions tab (workflow_dispatch).
 
-### Multi-platform Merge (CI)
+## Version Configuration
+
+All version settings are in `config.env`:
+
+```env
+RENPY_VERSION   = x.y.z
+RENPY_TAG       = x.y.z.NNNN
+RENPY_BUILD_TAG = renpy-x.y.z.NNNN
+PYGAME_SDL2_TAG = renpy-x.y.z.NNNN
+```
+
+After editing, re-run `make clone patch tars-android rapt dist-rapt` to build for the new version.
+
+## Patches
+
+| Patch | Description |
+|-------|-------------|
+| `renpy-build/0001-android-16k-page-alignment.patch` | Add `-Wl,-z,max-page-size=16384` to Android LDFLAGS |
+| `renpy-build/0002-fix-build-issues.patch` | copytree Python 3.10 compat, SDL2 Wayland fix, armv7l sysroot fix |
+| `renpy/0001-distribute-allow-env-override-git-describe.patch` | Allow `RENPY_GIT_DESCRIBE` env override for shallow clones |
+
+### Creating a Patch
 
 ```bash
-# Merge libs from other platform builds into the SDK
-make sdk EXTRA_LIBS=/path/to/extra-libs
-# EXTRA_LIBS should contain subdirs: darwin-x86_64/, linux-x86_64/, etc.
-```
-
-### Other Commands
-
-```bash
-make help         # Show all available targets
-make clean        # Remove everything (including source clones)
-make clean-deps   # Remove C dependencies only (keep source clones)
-make clean-rapt   # Remove RAPT build artifacts only
-```
-
-## Build Pipeline
-
-```
-make all (Linux)
-  │
-  ├─ clone          git clone renpy, rapt, pygame_sdl2, renpy-deps, renios
-  ├─ patched-renpy  git am patches/renpy/*.patch
-  ├─ patched-rapt   git am patches/rapt/*.patch
-  ├─ patched-renios git am patches/renios/*.patch
-  │
-  ├─ deps           build_python.sh + build.sh -> C dependency libraries
-  ├─ cython         Install Cython into deps Python 2.7
-  ├─ modules        pygame_sdl2 + renpy/module -> Python extensions
-  ├─ lib            renpython/build.py + merge.py -> lib/linux-x86_64/
-  ├─ merge-libs     (optional) import lib/ from other platforms
-  ├─ sdk            ./renpy.sh launcher distribute -> SDK zip
-  │
-  ├─ cython         Install Cython into deps Python 2.7
-  ├─ rapt-native    native/build.sh -> Android .so (16K aligned)
-  └─ dist-rapt      inject rapt -> distribute -> RAPT DLC zip
-
-make all (macOS)
-  │
-  ├─ clone/patch    (same as above)
-  ├─ deps           build_mac.sh -> C dependencies (MACOSX_DEPLOYMENT_TARGET=10.6)
-  ├─ modules/lib    -> lib/darwin-x86_64/
-  ├─ sdk            -> SDK zip
-  │
-  ├─ renios-native  build_all.sh -> iOS/Simulator native libraries
-  └─ dist-renios    inject renios -> distribute -> renios DLC zip
-```
-
-## Patch Management
-
-All upstream source modifications are recorded as `git format-patch` files under `patches/`:
-
-```
-patches/
-├── rapt/
-│   ├── 0001-Add-16K-page-alignment-support-for-Google-Play.patch
-│   └── 0002-Fix-build-compatibility-with-NDK-r19c-clang.patch
-├── renios/
-│   └── 0001-Use-RENPY_ROOT-env-var-in-copy_renpy.sh.patch
-└── renpy/
-    ├── 0001-Fix-distribute.py-hardcoded-paths-for-portable-build.patch
-    ├── 0002-Fix-launcher-options.rpy-hardcoded-Mac-signing-paths.patch
-    └── 0003-Skip-missing-platform-binaries-in-distribute-add_pyt.patch
-```
-
-### Creating a New Patch
-
-```bash
-cd work/<repo>
+cd work/renpy-build
 # make changes...
-git add -A && git commit -m "Describe the change"
-git format-patch -1 -o ../../patches/<repo>/
+git diff > ../../patches/renpy-build/0003-description.patch
 ```
 
-### Viewing Applied Patches
+Patches are applied in alphabetical order. Use numbered prefixes (0001-, 0002-, ...) to control ordering.
+
+## Full Platform Build
+
+To build for all platforms (Linux, Windows, macOS, Android, iOS):
 
 ```bash
-cd work/<repo> && git log --oneline
+sudo ./scripts/prepare-linux.sh
+make check-env
+make all
 ```
 
-## CI/CD
+## Make Targets
 
-The GitHub Actions workflow at `.github/workflows/build.yml` uses a multi-runner architecture:
+| Target | Description |
+|--------|-------------|
+| `make clone` | Clone source repositories |
+| `make patch` | Apply patches |
+| `make tars-android` | Download tarballs (Android only) |
+| `make tars` | Download all tarballs |
+| `make rapt` | Build RAPT (Android) |
+| `make dist-rapt` | Package RAPT DLC |
+| `make build` | Build all platforms |
+| `make dist` | Package full SDK + DLCs |
+| `make clean` | Remove everything |
+| `make clean-build` | Remove build artifacts (keep sources) |
 
-| Job           | Runner          | Produces                                            |
-| ------------- | --------------- | --------------------------------------------------- |
-| `build-linux` | `ubuntu-22.04`  | `lib/linux-x86_64/` + RAPT native `.so`             |
-| `build-mac`   | `macos-14`      | `lib/darwin-x86_64/` + renios native libs           |
-| `package`     | `ubuntu-22.04`  | Merges all libs, builds SDK + RAPT DLC + renios DLC |
-| `release`     | `ubuntu-latest` | Creates GitHub Release from tag                     |
+## License
 
-Workflow triggers:
-
-- **Tag push** (`v*`): automatic full build and GitHub Release creation
-- **Manual dispatch**: select target (all / linux-only / mac-only)
-
-C dependency builds are cached per platform to avoid redundant compilation.
-
-## RAPT 16K Page Alignment
-
-The `patches/rapt/0001-*` patch adds the `-Wl,-z,max-page-size=16384` linker flag,
-ensuring all `.so` files meet Google Play's 16K page alignment requirement.
-Alignment is automatically verified via `readelf` during the build.
-
-## Dependency Versions
-
-| Component   | Version             | Source                   |
-| ----------- | ------------------- | ------------------------ |
-| Ren'Py      | 7.3.5.606           | source build             |
-| Python      | 2.7.10              | renpy-deps/source/       |
-| SDL2        | 2.0.4               | renpy-deps/source/       |
-| FFmpeg      | 3.0                 | renpy-deps/source/       |
-| FreeType    | 2.4.11              | renpy-deps/source/       |
-| GLEW        | 1.7.0               | renpy-deps/source/       |
-| Cython      | 0.29.36             | pip (RAPT cross-compile) |
-| Android NDK | r19c (19.2.5345600) | sdkmanager               |
+This project wraps the upstream [renpy-build](https://github.com/renpy/renpy-build) and is subject to Ren'Py's licensing terms.

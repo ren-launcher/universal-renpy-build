@@ -1,97 +1,19 @@
-name: Build Ren'Py Distribution
+name: Build RAPT
 
 on:
   push:
     tags: ["v*"]
   workflow_dispatch:
-    inputs:
-      target:
-        description: "Build targets to run"
-        default: "all"
-        type: choice
-        options:
-          - all
-          - linux-only
-          - mac-only
+
+env:
+  RENPY_VERSION: "7.4.11"
 
 jobs:
   # ════════════════════════════════════════════════════════════════════════
-  # Job 1: Linux — build lib/linux-x86_64 + RAPT native .so
+  # Build linux + android, then package RAPT DLC via official distribute
   # ════════════════════════════════════════════════════════════════════════
-  build-linux:
-    if: inputs.target != 'mac-only'
-    runs-on: ubuntu-22.04
-    timeout-minutes: 180
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            build-essential ccache patchelf \
-            libgl1-mesa-dev libglu1-mesa-dev \
-            libasound2-dev libpulse-dev \
-            libx11-dev libxext-dev libxrandr-dev libxi-dev libxfixes-dev \
-            libxcursor-dev libxss-dev libxinerama-dev libxxf86vm-dev \
-            libxmu-dev \
-            libdbus-1-dev libudev-dev \
-            python2 python2-dev \
-            xvfb nasm yasm
-
-      - name: Setup python -> python2
-        run: |
-          mkdir -p "$HOME/.local/bin"
-          ln -sf /usr/bin/python2 "$HOME/.local/bin/python"
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-      - name: Cache C dependencies
-        uses: actions/cache@v4
-        with:
-          path: work/linux-x86_64-deps
-          key: linux-deps-${{ hashFiles('config.env') }}
-
-      - name: Build lib/linux-x86_64
-        run: make lib-only
-
-      - name: Cache Android SDK/NDK
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/Android/Sdk/ndk
-            ~/Android/Sdk/build-tools
-            ~/Android/Sdk/platforms
-          key: android-sdk-${{ hashFiles('config.env') }}
-
-      - name: Build RAPT native
-        run: make rapt-native
-
-      - name: Upload lib/linux-x86_64
-        uses: actions/upload-artifact@v4
-        with:
-          name: lib-linux-x86_64
-          path: work/renpy/lib/linux-x86_64/
-          if-no-files-found: error
-
-      - name: Upload RAPT artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: rapt-artifacts
-          path: |
-            work/rapt/android.py
-            work/rapt/buildlib/
-            work/rapt/templates/
-            work/rapt/project/
-          if-no-files-found: error
-
-  # ════════════════════════════════════════════════════════════════════════
-  # Job 2: macOS — build lib/darwin-x86_64 + renios native
-  # ════════════════════════════════════════════════════════════════════════
-  build-mac:
-    if: inputs.target != 'linux-only'
-    runs-on: macos-14
+  build:
+    runs-on: ubuntu-latest
     timeout-minutes: 240
 
     steps:
@@ -100,172 +22,83 @@ jobs:
 
       - name: Install system dependencies
         run: |
-          # Install Rosetta 2 for x86_64 builds (deps Python 2.7.10 is x86_64 only)
-          softwareupdate --install-rosetta --agree-to-license || true
-          # nasm: libjpeg-turbo SIMD; libtool: GNU libtool for autoreconf (AC_PROG_LIBTOOL)
-          # automake: provides aclocal, required by autoreconf
-          brew install nasm yasm libtool automake ccache
-
-      - name: Cache C dependencies
-        uses: actions/cache@v4
-        with:
-          path: work/darwin-x86_64-deps
-          key: mac-deps-${{ hashFiles('config.env') }}
-
-      - name: Build lib/darwin-x86_64
-        run: make lib-only
-
-      - name: Build renios native
-        run: make renios-native
-
-      - name: Upload lib/darwin-x86_64
-        uses: actions/upload-artifact@v4
-        with:
-          name: lib-darwin-x86_64
-          path: work/renpy/lib/darwin-x86_64/
-          if-no-files-found: error
-
-      - name: Upload renios artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: renios-artifacts
-          path: |
-            work/renios/ios.py
-            work/renios/buildlib/
-            work/renios/prototype/
-          if-no-files-found: error
-
-  # ════════════════════════════════════════════════════════════════════════
-  # Job 3: Package — merge all platform libs and create final distributions
-  # ════════════════════════════════════════════════════════════════════════
-  package:
-    needs: [build-linux, build-mac]
-    if: |
-      always() &&
-      (needs.build-linux.result == 'success' || needs.build-linux.result == 'skipped') &&
-      (needs.build-mac.result == 'success' || needs.build-mac.result == 'skipped') &&
-      (needs.build-linux.result == 'success' || needs.build-mac.result == 'success')
-    runs-on: ubuntu-22.04
-    timeout-minutes: 60
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install system dependencies
-        run: |
           sudo apt-get update
           sudo apt-get install -y \
-            build-essential ccache patchelf \
-            libgl1-mesa-dev libglu1-mesa-dev \
-            libasound2-dev libpulse-dev \
-            libx11-dev libxext-dev libxrandr-dev libxi-dev libxfixes-dev \
-            libxcursor-dev libxss-dev libxinerama-dev libxxf86vm-dev \
-            libxmu-dev \
-            libdbus-1-dev libudev-dev \
-            python2 python2-dev \
-            xvfb nasm yasm
+            git build-essential ccache curl unzip autoconf \
+            python3-dev python3-jinja2 python3-pip \
+            libssl-dev libbz2-dev libsdl2-dev \
+            libpng-dev libfreetype-dev zlib1g-dev \
+            libavcodec-dev libavformat-dev libswresample-dev libswscale-dev \
+            libfribidi-dev libjpeg-dev \
+            libgmp-dev libmpfr-dev libmpc-dev \
+            debootstrap zip
+          # renpy-build 7.4.x requires Cython 0.29.x (incompatible with Cython 3.x)
+          pip3 install 'Cython<3'
 
-      - name: Setup python -> python2
-        run: |
-          mkdir -p "$HOME/.local/bin"
-          ln -sf /usr/bin/python2 "$HOME/.local/bin/python"
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
+      - name: Clone sources
+        run: make clone
 
-      - name: Load config.env
-        run: |
-          # Export config.env variables to GITHUB_ENV for subsequent steps
-          grep -v '^#' config.env | grep '=' >> $GITHUB_ENV
+      - name: Apply patches
+        run: make patch
 
-      - name: Cache C dependencies
+      - name: Cache source tarballs
         uses: actions/cache@v4
         with:
-          path: work/linux-x86_64-deps
-          key: linux-deps-${{ hashFiles('config.env') }}
+          path: |
+            work/renpy-build/source
+            work/renpy-build/tars
+          key: tarballs-all-${{ hashFiles('scripts/download-tars.sh') }}
 
-      - name: Build local lib/linux-x86_64
-        run: make lib-only
+      - name: Download source tarballs
+        run: make tars
 
-      - name: Download lib/darwin-x86_64
-        if: needs.build-mac.result == 'success'
-        uses: actions/download-artifact@v4
+      - name: Cache build artifacts
+        uses: actions/cache@v4
         with:
-          name: lib-darwin-x86_64
-          path: extra-libs/darwin-x86_64/
+          path: |
+            work/tmp/host
+            work/tmp/cross.linux
+            work/tmp/cross.android
+            work/tmp/sysroot.linux-x86_64
+            work/tmp/sysroot.linux-i686
+            work/tmp/install.linux-x86_64
+            work/tmp/install.linux-i686
+            work/tmp/install.android-arm64_v8a
+            work/tmp/install.android-armeabi_v7a
+            work/tmp/install.android-x86_64
+            work/tmp/complete
+          key: full-build-${{ hashFiles('config.env', 'patches/**') }}-${{ github.sha }}
+          restore-keys: |
+            full-build-${{ hashFiles('config.env', 'patches/**') }}-
 
-      - name: Merge all platform libs and build SDK
-        run: make sdk EXTRA_LIBS=${{ github.workspace }}/extra-libs
+      - name: Build (linux + android)
+        run: make build
 
-      - name: Download RAPT artifacts
-        if: needs.build-linux.result == 'success'
-        uses: actions/download-artifact@v4
-        with:
-          name: rapt-artifacts
-          path: work/rapt-import/
+      - name: Package RAPT DLC
+        run: make dist-rapt
 
-      - name: Build RAPT DLC
-        if: needs.build-linux.result == 'success'
-        run: |
-          mkdir -p output
-          mkdir -p work/renpy/rapt
-          cp -a work/rapt-import/android.py work/renpy/rapt/
-          cp -a work/rapt-import/buildlib work/renpy/rapt/
-          cp -a work/rapt-import/templates work/renpy/rapt/
-          cp -a work/rapt-import/project work/renpy/rapt/prototype
-          . work/linux-x86_64-deps/env.sh && \
-            python -m compileall work/renpy/rapt/buildlib/
-          cd work/renpy && \
-            SDL_VIDEODRIVER=dummy ./renpy.sh launcher distribute launcher \
-              --package rapt \
-              --destination ${{ github.workspace }}/output \
-              --no-update
-
-      - name: Download renios artifacts
-        if: needs.build-mac.result == 'success'
-        uses: actions/download-artifact@v4
-        with:
-          name: renios-artifacts
-          path: work/renios-import/
-
-      - name: Build renios DLC
-        if: needs.build-mac.result == 'success'
-        run: |
-          mkdir -p output
-          mkdir -p work/renpy/renios
-          cp -a work/renios-import/ios.py work/renpy/renios/
-          cp -a work/renios-import/buildlib work/renpy/renios/
-          cp -a work/renios-import/prototype work/renpy/renios/prototype
-          echo "${{ env.RENPY_VERSION }}" > work/renpy/renios/version.txt
-          . work/linux-x86_64-deps/env.sh && \
-            python -m compileall work/renpy/renios/buildlib/
-          cd work/renpy && \
-            SDL_VIDEODRIVER=dummy ./renpy.sh launcher distribute launcher \
-              --package renios \
-              --destination ${{ github.workspace }}/output \
-              --no-update
-
-      - name: Upload final distribution
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: renpy-dist
-          path: output/
+          name: renpy-${{ env.RENPY_VERSION }}-rapt
+          path: output/renpy-*-rapt.*
           if-no-files-found: error
 
   # ════════════════════════════════════════════════════════════════════════
-  # Job 4: Release — create GitHub release from tag
+  # Release — create/update GitHub release from tag
   # ════════════════════════════════════════════════════════════════════════
   release:
     if: startsWith(github.ref, 'refs/tags/')
-    needs: package
+    needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: write
 
     steps:
-      - name: Download artifacts
+      - name: Download artifact
         uses: actions/download-artifact@v4
         with:
-          name: renpy-dist
+          name: renpy-${{ env.RENPY_VERSION }}-rapt
           path: dist/
 
       - name: Create GitHub Release
