@@ -101,17 +101,24 @@ $(STAMPS)/patched-renpy-deps: $(wildcard patches/renpy-deps/*.patch) $(STAMPS)/c
 $(STAMPS)/deps: $(STAMPS)/patched-renpy-deps
 	@echo "==> Building C dependencies for $(PLATFORM)..."
 	mkdir -p $(DEPS_BUILD)
+	@# Bootstrap: modern macOS has no 'python' command; create a shim so
+	@# build_python.sh's norm_source.py call works before Python 2.7 is built.
+	@mkdir -p $(DEPS_BUILD)/.bootstrap-bin && \
+	  if ! command -v python >/dev/null 2>&1; then \
+	    ln -sf "$$(command -v python3)" $(DEPS_BUILD)/.bootstrap-bin/python; \
+	    echo "==> Created bootstrap python -> python3 shim"; \
+	  fi
 ifeq ($(UNAME_S),Darwin)
   ifeq ($(UNAME_M),arm64)
 	@echo "==> Building under Rosetta 2 (x86_64) for Apple Silicon..."
-	cd $(DEPS_BUILD) && /usr/bin/arch -x86_64 bash $(RENPY_DEPS)/build_mac.sh
+	cd $(DEPS_BUILD) && PATH="$(DEPS_BUILD)/.bootstrap-bin:$$PATH" /usr/bin/arch -x86_64 bash $(RENPY_DEPS)/build_mac.sh
   else
-	cd $(DEPS_BUILD) && bash $(RENPY_DEPS)/build_mac.sh
+	cd $(DEPS_BUILD) && PATH="$(DEPS_BUILD)/.bootstrap-bin:$$PATH" bash $(RENPY_DEPS)/build_mac.sh
   endif
 else
-	cd $(DEPS_BUILD) && bash $(RENPY_DEPS)/build_python.sh
+	cd $(DEPS_BUILD) && PATH="$(DEPS_BUILD)/.bootstrap-bin:$$PATH" bash $(RENPY_DEPS)/build_python.sh
 	cd $(DEPS_BUILD) && export PKG_CONFIG_PATH="$(DEPS_BUILD)/install/lib/pkgconfig:$$PKG_CONFIG_PATH" && \
-	  bash $(RENPY_DEPS)/build.sh
+	  PATH="$(DEPS_BUILD)/.bootstrap-bin:$$PATH" bash $(RENPY_DEPS)/build.sh
 endif
 	@touch $@
 
