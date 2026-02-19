@@ -20,11 +20,13 @@ mkdir -p "$OUTPUT"
 
 cd "$RENPY_SRC"
 
-# ── Symlinks (Python 2 builds use lib2/, rapt2/, renios2/) ─────────────────
-rm -f lib rapt renios
-ln -sf lib2 lib
-ln -sf rapt2 rapt
-ln -sf renios2 renios
+# ── Symlinks (Python 2 builds use rapt2/, renios2/) ─────────────────
+# In 7.5.x, lib/ is a real directory (not lib2 symlink).
+if [ -L rapt ]; then rm -f rapt; fi
+if [ ! -e rapt ] && [ -d rapt2 ]; then ln -sf rapt2 rapt; fi
+
+if [ -L renios ]; then rm -f renios; fi
+if [ ! -e renios ] && [ -d renios2 ]; then ln -sf renios2 renios; fi
 
 # Symlink pygame_sdl2 source if not present
 if [ ! -e pygame_sdl2 ] && [ ! -L pygame_sdl2 ]; then
@@ -32,16 +34,29 @@ if [ ! -e pygame_sdl2 ] && [ ! -L pygame_sdl2 ]; then
 fi
 
 # ── Verify linux-x86_64 runtime exists ─────────────────────────────────────
-if [ ! -f lib/linux-x86_64/renpy ]; then
-    echo "ERROR: lib/linux-x86_64/renpy not found."
+# Support both 7.4.x (lib/linux-x86_64) and 7.5.x (lib/py2-linux-x86_64) layouts.
+RENPY_BIN=""
+for candidate in lib/linux-x86_64/renpy lib/py2-linux-x86_64/renpy; do
+    if [ -f "$candidate" ]; then
+        RENPY_BIN="$candidate"
+        break
+    fi
+done
+if [ -z "$RENPY_BIN" ]; then
+    echo "ERROR: renpy binary not found in lib/linux-x86_64/ or lib/py2-linux-x86_64/"
     echo "A full build (including linux platform) is required."
     exit 1
 fi
 
 # ── Create stub for mac-x86_64 (not built, but checked by distribute) ─────
-if [ ! -d lib/mac-x86_64 ]; then
-    mkdir -p lib/mac-x86_64
-    cp lib/linux-x86_64/renpy lib/mac-x86_64/renpy
+if [ ! -d lib/mac-x86_64 ] && [ ! -d lib/py2-mac-x86_64 ]; then
+    if [ -d lib/py2-linux-x86_64 ]; then
+        mkdir -p lib/py2-mac-x86_64
+        cp lib/py2-linux-x86_64/renpy lib/py2-mac-x86_64/renpy
+    elif [ -d lib/linux-x86_64 ]; then
+        mkdir -p lib/mac-x86_64
+        cp lib/linux-x86_64/renpy lib/mac-x86_64/renpy
+    fi
 fi
 
 # ── Write vc_version.py ───────────────────────────────────────────────────

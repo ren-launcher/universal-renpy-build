@@ -1,5 +1,5 @@
 diff --git a/renpybuild/model.py b/renpybuild/model.py
-index 64edda0..8e3f1c8 100644
+index 1ffd02b..7ad568e 100644
 --- a/renpybuild/model.py
 +++ b/renpybuild/model.py
 @@ -13,8 +13,12 @@ import renpybuild.run
@@ -17,26 +17,70 @@ index 64edda0..8e3f1c8 100644
  
  
  shutil.copytree = copytree
+diff --git a/tasks/pythonlib.py b/tasks/pythonlib.py
+index 2ce0b76..3f42bda 100644
+--- a/tasks/pythonlib.py
++++ b/tasks/pythonlib.py
+@@ -201,8 +201,6 @@ six.pyo
+ 
+ pefile.pyo
+ ordlookup/
+-
+-steamapi.pyo
+ """
+ 
+ 
+@@ -503,8 +501,6 @@ pyobjus/
+ 
+ pefile
+ ordlookup/
+-
+-steamapi
+ """
+ 
+ 
+@@ -556,8 +552,6 @@ def python3(c):
+                 dest.parent.mkdir(parents=True, exist_ok=True)
+                 shutil.copy(fn, dest)
+ 
+-    # used_rules.add("steamapi")
+-
+     if rules - used_rules:
+         raise Exception(f"Unused rules: {rules - used_rules}")
+ 
 diff --git a/tasks/sdl2.py b/tasks/sdl2.py
-index 1fae2cd..7dbe4b6 100644
+index 6bbb9bb..d609253 100644
 --- a/tasks/sdl2.py
 +++ b/tasks/sdl2.py
-@@ -53,6 +53,10 @@ def build(c):
-         --disable-render-metal
-         --disable-jack
+@@ -52,6 +52,7 @@ def build(c):
  
-+    {% if c.platform == "linux" %}
-+        --disable-video-wayland
-+    {% endif %}
-+
      {% if c.platform == "android" %}
-         --disable-video-wayland
          --disable-video-x11
++        --disable-video-kmsdrm
+ 
+         --disable-oss
+         --disable-alsa
 diff --git a/tasks/sysroot.py b/tasks/sysroot.py
-index 789f873..d2ca833 100644
+index c230369..e91bb32 100644
 --- a/tasks/sysroot.py
 +++ b/tasks/sysroot.py
-@@ -75,7 +75,6 @@ RASPI_PACKAGES = [
+@@ -14,7 +14,6 @@ PACKAGES = [
+     'libxxf86vm-dev',
+     'libxss-dev',
+     'libgl1-mesa-dev',
+-    'libesd0-dev',
+     'libdbus-1-dev',
+     'libudev-dev',
+     'libgl1-mesa-dev',
+@@ -22,6 +21,7 @@ PACKAGES = [
+     'libgles2-mesa-dev',
+     'libglu1-mesa-dev',
+     'libegl1-mesa-dev',
++    'libgbm-dev',
+     'libibus-1.0-dev',
+     'fcitx-libs-dev',
+     'libsamplerate0-dev',
+@@ -82,11 +82,11 @@ RASPI_PACKAGES = [
      'libxxf86vm-dev',
      'libxss-dev',
      'libgl1-mesa-dev',
@@ -44,7 +88,12 @@ index 789f873..d2ca833 100644
      'libdbus-1-dev',
      'libudev-dev',
      'libgles2-mesa-dev',
-@@ -105,11 +104,11 @@ def install(c):
+     'libegl1-mesa-dev',
++    'libgbm-dev',
+     'libibus-1.0-dev',
+     'fcitx-libs-dev',
+     'libsamplerate0-dev',
+@@ -112,11 +112,11 @@ def install(c):
          --cache-dir={{ tmp }}/debs
          --variant=minbase
          --include={{ packages }}

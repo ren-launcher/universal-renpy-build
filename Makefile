@@ -1,6 +1,6 @@
 # ============================================================================
 # Universal Ren'Py Build System
-# Build Ren'Py 7.4.11 SDK and DLC packages by wrapping upstream renpy-build.
+# Build Ren'Py 7.5.3 SDK and DLC packages by wrapping upstream renpy-build.
 #
 # Architecture:
 #   This Makefile orchestrates the upstream renpy-build system, applying our
