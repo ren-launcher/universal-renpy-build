@@ -68,6 +68,15 @@ typedef struct csmVector2 {
     float Y;
 } csmVector2;
 
+/* ── csmVector4 ─────────────────────────────────────────────────────────── */
+
+typedef struct csmVector4 {
+    float X;
+    float Y;
+    float Z;
+    float W;
+} csmVector4;
+
 /* ── Log callback ───────────────────────────────────────────────────────── */
 
 typedef void (*csmLogFunction)(const char* message);

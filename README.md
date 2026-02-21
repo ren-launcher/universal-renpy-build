@@ -77,24 +77,6 @@ PYGAME_SDL2_TAG = renpy-x.y.z.NNNN
 
 After editing, re-run `make clone patch tars-android rapt dist-rapt` to build for the new version.
 
-## Patches
-
-| Patch | Description |
-|-------|-------------|
-| `renpy-build/0001-android-16k-page-alignment.patch` | Add `-Wl,-z,max-page-size=16384` to Android LDFLAGS |
-| `renpy-build/0002-fix-build-issues.patch` | copytree Python 3.10 compat, SDL2 Wayland fix, armv7l sysroot fix |
-| `renpy/0001-distribute-allow-env-override-git-describe.patch` | Allow `RENPY_GIT_DESCRIBE` env override for shallow clones |
-
-### Creating a Patch
-
-```bash
-cd work/renpy-build
-# make changes...
-git diff > ../../patches/renpy-build/0003-description.patch
-```
-
-Patches are applied in alphabetical order. Use numbered prefixes (0001-, 0002-, ...) to control ordering.
-
 ## Full Platform Build
 
 To build for all platforms (Linux, Windows, macOS, Android, iOS):

@@ -1,27 +1,8 @@
-diff --git a/renpybuild/model.py b/renpybuild/model.py
-index 1ffd02b..7ad568e 100644
---- a/renpybuild/model.py
-+++ b/renpybuild/model.py
-@@ -13,8 +13,12 @@ import renpybuild.run
- old_copytree = shutil.copytree
- 
- 
--def copytree(*args, ignore_dangling_symlinks=True, **kwargs):
--    return old_copytree(*args, ignore_dangling_symlinks=ignore_dangling_symlinks, **kwargs)
-+def copytree(*args, **kwargs):
-+    # ignore_dangling_symlinks is the 6th param (index 5) of shutil.copytree.
-+    # Only inject it when it is not already supplied positionally or by keyword.
-+    if len(args) < 6 and 'ignore_dangling_symlinks' not in kwargs:
-+        kwargs['ignore_dangling_symlinks'] = True
-+    return old_copytree(*args, **kwargs)
- 
- 
- shutil.copytree = copytree
 diff --git a/tasks/pythonlib.py b/tasks/pythonlib.py
-index 2ce0b76..3f42bda 100644
+index b10134d..2f409e8 100644
 --- a/tasks/pythonlib.py
 +++ b/tasks/pythonlib.py
-@@ -201,8 +201,6 @@ six.pyo
+@@ -204,8 +204,6 @@ six.pyo
  
  pefile.pyo
  ordlookup/
@@ -30,7 +11,15 @@ index 2ce0b76..3f42bda 100644
  """
  
  
-@@ -503,8 +501,6 @@ pyobjus/
+@@ -236,7 +234,6 @@ def python2(c: Context):
+         c.path("{{ install }}/lib/{{ pythonver }}/site-packages"),
+         c.path("{{ pytmp }}/pyjnius"),
+         c.path("{{ pytmp }}/pyobjus"),
+-        c.path("{{ pytmp }}/steam"),
+         ]
+ 
+     dist = c.path("{{ distlib }}/{{ pythonver }}")
+@@ -467,8 +464,6 @@ pyobjus/
  
  pefile
  ordlookup/
@@ -39,32 +28,28 @@ index 2ce0b76..3f42bda 100644
  """
  
  
-@@ -556,8 +552,6 @@ def python3(c):
+@@ -488,7 +483,6 @@ def python3(c: Context):
+         c.path("{{ install }}/lib/{{ pythonver }}/site-packages"),
+         c.path("{{ pytmp }}/pyjnius"),
+         c.path("{{ pytmp }}/pyobjus"),
+-        c.path("{{ pytmp }}/steam"),
+         ]
+ 
+     dist = c.path("{{ distlib }}/{{ pythonver }}")
+@@ -524,7 +518,7 @@ def python3(c: Context):
                  dest.parent.mkdir(parents=True, exist_ok=True)
                  shutil.copy(fn, dest)
  
 -    # used_rules.add("steamapi")
--
++    used_rules.add("steamapi")
+ 
      if rules - used_rules:
-         raise Exception(f"Unused rules: {rules - used_rules}")
- 
-diff --git a/tasks/sdl2.py b/tasks/sdl2.py
-index 6bbb9bb..d609253 100644
---- a/tasks/sdl2.py
-+++ b/tasks/sdl2.py
-@@ -52,6 +52,7 @@ def build(c):
- 
-     {% if c.platform == "android" %}
-         --disable-video-x11
-+        --disable-video-kmsdrm
- 
-         --disable-oss
-         --disable-alsa
+         if c.platform != "web":
 diff --git a/tasks/sysroot.py b/tasks/sysroot.py
-index c230369..e91bb32 100644
+index 85ed864..f3bf6f6 100644
 --- a/tasks/sysroot.py
 +++ b/tasks/sysroot.py
-@@ -14,7 +14,6 @@ PACKAGES = [
+@@ -15,7 +15,6 @@ PACKAGES = [
      'libxxf86vm-dev',
      'libxss-dev',
      'libgl1-mesa-dev',
@@ -72,7 +57,7 @@ index c230369..e91bb32 100644
      'libdbus-1-dev',
      'libudev-dev',
      'libgl1-mesa-dev',
-@@ -22,6 +21,7 @@ PACKAGES = [
+@@ -23,6 +22,7 @@ PACKAGES = [
      'libgles2-mesa-dev',
      'libglu1-mesa-dev',
      'libegl1-mesa-dev',
@@ -80,7 +65,7 @@ index c230369..e91bb32 100644
      'libibus-1.0-dev',
      'fcitx-libs-dev',
      'libsamplerate0-dev',
-@@ -82,11 +82,11 @@ RASPI_PACKAGES = [
+@@ -85,11 +85,11 @@ RASPI_PACKAGES = [
      'libxxf86vm-dev',
      'libxss-dev',
      'libgl1-mesa-dev',
@@ -93,7 +78,7 @@ index c230369..e91bb32 100644
      'libibus-1.0-dev',
      'fcitx-libs-dev',
      'libsamplerate0-dev',
-@@ -112,11 +112,11 @@ def install(c):
+@@ -115,11 +115,11 @@ def install_linux_raspi(c: Context):
          --cache-dir={{ tmp }}/debs
          --variant=minbase
          --include={{ packages }}

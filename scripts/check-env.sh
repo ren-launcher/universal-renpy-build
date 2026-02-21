@@ -21,18 +21,23 @@ echo "==> Checking build prerequisites..."
 check_cmd git          "version control"
 check_cmd python3      "needed to run renpy-build"
 check_cmd make         "build system"
-check_cmd gcc          "C compiler"
-check_cmd g++          "C++ compiler"
-check_cmd ccache       "compiler cache (optional but expected)"
+check_cmd clang-15     "C/C++ compiler (apt: clang-15)"
+check_cmd lld-15       "LLVM linker (apt: lld-15)"
+check_cmd ccache       "compiler cache"
 check_cmd curl         "downloading source tarballs"
-check_cmd patch        "applying patches"
 check_cmd tar          "extracting archives"
+check_cmd pkg-config   "library discovery (apt: pkg-config)"
+check_cmd autoconf     "autotools"
 
 # Python dependencies for renpy-build
 echo ""
 echo "==> Checking Python 3 modules..."
 python3 -c "import jinja2" 2>/dev/null && echo "  [ok]      jinja2" || {
     echo "  [MISSING] jinja2 — pip3 install jinja2"
+    ERRORS=$((ERRORS + 1))
+}
+python3 -c "import Cython; v=Cython.__version__; assert int(v.split('.')[0]) < 3" 2>/dev/null && echo "  [ok]      Cython (<3)" || {
+    echo "  [MISSING] Cython <3 — pip3 install 'Cython<3'"
     ERRORS=$((ERRORS + 1))
 }
 
@@ -44,17 +49,15 @@ echo "==> Platform: $UNAME_S"
 if [ "$UNAME_S" = "Linux" ]; then
     check_cmd debootstrap "creating sysroots for cross-compilation"
     check_cmd nasm        "assembly (libjpeg-turbo, ffmpeg)"
-    check_cmd autoconf    "autotools"
-    check_cmd x86_64-w64-mingw32-gcc "Windows cross-compiler (apt: mingw-w64)"
-
-    # Check for LLVM 13 (needed for iOS cross-compilation)
-    check_cmd clang-13    "iOS cross-compilation (apt: from llvm.sh)"
-    check_cmd llvm-ar-13  "iOS cross-compilation"
-    check_cmd cmake       "macOS cross-compilation toolchain"
+    check_cmd wayland-scanner "Wayland protocol scanner (apt: libwayland-dev)"
 
     echo ""
     echo "==> Checking Linux-specific packages..."
-    for pkg in libssl-dev libbz2-dev libgmp-dev libmpfr-dev libmpc-dev; do
+    for pkg in libssl-dev libbz2-dev liblzma-dev libgmp-dev libmpfr-dev libmpc-dev \
+               libsdl2-dev libsdl2-image-dev libsdl2-ttf-dev libsdl2-mixer-dev \
+               libharfbuzz-dev libbsd-dev libwayland-dev wayland-protocols \
+               libfreetype6-dev libfribidi-dev libpng-dev zlib1g-dev \
+               libavcodec-dev libavformat-dev libswresample-dev libswscale-dev; do
         if dpkg -s "$pkg" &>/dev/null; then
             echo "  [ok]      $pkg"
         else

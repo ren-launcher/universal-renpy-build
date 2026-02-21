@@ -1,6 +1,6 @@
 # ============================================================================
 # Universal Ren'Py Build System
-# Build Ren'Py 7.5.3 SDK and DLC packages by wrapping upstream renpy-build.
+# Build Ren'Py SDK and DLC packages by wrapping upstream renpy-build.
 #
 # Architecture:
 #   This Makefile orchestrates the upstream renpy-build system, applying our
@@ -17,16 +17,16 @@ include config.env
 ROOT           := $(CURDIR)
 WORK           := $(ROOT)/work
 BUILD_ROOT     := $(WORK)/renpy-build
-RENPY_SRC      := $(WORK)/renpy
-PYGAME_SRC     := $(WORK)/pygame_sdl2
-TMP            := $(WORK)/tmp
+RENPY_SRC      := $(BUILD_ROOT)/renpy
+PYGAME_SRC     := $(BUILD_ROOT)/pygame_sdl2
+TMP            := $(BUILD_ROOT)/tmp
 OUTPUT         := $(ROOT)/output
 STAMPS         := $(WORK)/.stamps
 
 $(shell mkdir -p $(STAMPS) $(OUTPUT))
 
 # ── Build arguments for renpy-build/build.py ───────────────────────────────
-BUILD_ARGS := --tmp $(TMP) --pygame_sdl2 $(PYGAME_SRC) --renpy $(RENPY_SRC)
+BUILD_ARGS :=
 
 ifneq ($(BUILD_PLATFORMS),)
 BUILD_ARGS += --platform $(BUILD_PLATFORMS)
@@ -45,7 +45,7 @@ ALL_PLATFORM_ARCHS := $(shell python3 -c "v={'linux':['x86_64','i686','armv7l','
 
 # ── Phony targets ──────────────────────────────────────────────────────────
 .PHONY: all build dist dist-rapt rebuild clean clean-build help \
-        clone patch tars setup check-env
+        clone patch tars setup check-env prepare
 
 # Default target
 all: build dist ## Full build: deps + modules + distribution
@@ -68,7 +68,7 @@ $(STAMPS)/cloned-renpy-build:
 	fi
 	@touch $@
 
-$(STAMPS)/cloned-renpy:
+$(STAMPS)/cloned-renpy: $(STAMPS)/cloned-renpy-build
 	@echo "==> Cloning renpy ($(RENPY_TAG))..."
 	@if [ -d "$(RENPY_SRC)/.git" ]; then \
 		cd $(RENPY_SRC) && git fetch --tags && git checkout $(RENPY_TAG); \
@@ -77,7 +77,7 @@ $(STAMPS)/cloned-renpy:
 	fi
 	@touch $@
 
-$(STAMPS)/cloned-pygame:
+$(STAMPS)/cloned-pygame: $(STAMPS)/cloned-renpy-build
 	@echo "==> Cloning pygame_sdl2 ($(PYGAME_SDL2_TAG))..."
 	@if [ -d "$(PYGAME_SRC)/.git" ]; then \
 		cd $(PYGAME_SRC) && git fetch --tags && git checkout $(PYGAME_SDL2_TAG); \
@@ -206,6 +206,9 @@ rebuild: patch ## Rebuild specific tasks: make rebuild TASKS="renpython librenpy
 
 check-env: ## Verify build prerequisites are installed
 	$(ROOT)/scripts/check-env.sh
+
+prepare: ## Install system dependencies (requires sudo)
+	$(ROOT)/scripts/prepare-linux.sh
 
 clean-build: ## Remove build artifacts (keeps source clones)
 	rm -rf $(TMP)

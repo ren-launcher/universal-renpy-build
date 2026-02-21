@@ -80,7 +80,7 @@ TARS_DIR="$BUILD_ROOT/tars"
 mkdir -p "$TARS_DIR"
 
 declare -A TOOLCHAIN_TARBALLS=(
-    ["android-ndk-r21d-linux-x86_64.zip"]="https://dl.google.com/android/repository/android-ndk-r21d-linux-x86_64.zip"
+    ["android-ndk-r25c-linux.zip"]="https://dl.google.com/android/repository/android-ndk-r25c-linux.zip"
 )
 
 # Cross-compilation toolchains (not needed for Android-only builds)
