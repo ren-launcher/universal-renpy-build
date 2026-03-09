@@ -25,7 +25,11 @@ if [ -L rapt ]; then rm -f rapt; fi
 if [ ! -e rapt ] && [ -d rapt2 ]; then ln -sf rapt2 rapt; fi
 
 if [ -L renios ]; then rm -f renios; fi
-if [ ! -e renios ] && [ -d renios2 ]; then ln -sf renios2 renios; fi
+if [ ! -e renios ] && [ -d "$BUILD_ROOT/renios" ]; then
+    ln -sf "$BUILD_ROOT/renios" renios
+elif [ ! -e renios ] && [ -d renios2 ]; then
+    ln -sf renios2 renios
+fi
 
 # Symlink pygame_sdl2 source if not present
 if [ ! -e pygame_sdl2 ] && [ ! -L pygame_sdl2 ]; then
@@ -74,6 +78,11 @@ EOF
 # ── Environment for distribute ────────────────────────────────────────────
 export RENPY_SIMPLE_EXCEPTIONS=1
 export SDL_VIDEODRIVER=dummy
+
+if [ ! -f update.pem ] || ! grep -q "BEGIN EC PRIVATE KEY" update.pem 2>/dev/null; then
+    echo "==> update.pem missing or not EC format, generating ECDSA signing key..."
+    openssl ecparam -name prime256v1 -genkey -noout -out update.pem >/dev/null 2>&1
+fi
 
 echo "==> Building RAPT distribution package (version $VERSION)..."
 

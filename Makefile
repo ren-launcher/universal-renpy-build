@@ -97,6 +97,7 @@ $(STAMPS)/patched-renpy-build: $(STAMPS)/cloned-renpy-build $(wildcard patches/r
 	@cd $(BUILD_ROOT) && git checkout $(RENPY_BUILD_TAG) -- . 2>/dev/null || true
 	@if ls patches/renpy-build/*.patch 1>/dev/null 2>&1; then \
 		cd $(BUILD_ROOT) && \
+		set -e; \
 		for p in $(ROOT)/patches/renpy-build/*.patch; do \
 			echo "    Applying $$(basename $$p)"; \
 			git apply "$$p"; \
@@ -109,6 +110,7 @@ $(STAMPS)/patched-renpy: $(STAMPS)/cloned-renpy $(wildcard patches/renpy/*.patch
 	@cd $(RENPY_SRC) && git checkout $(RENPY_TAG) -- . 2>/dev/null || true
 	@if ls patches/renpy/*.patch 1>/dev/null 2>&1; then \
 		cd $(RENPY_SRC) && \
+		set -e; \
 		for p in $(ROOT)/patches/renpy/*.patch; do \
 			echo "    Applying $$(basename $$p)"; \
 			git apply "$$p"; \
@@ -121,6 +123,7 @@ $(STAMPS)/patched-pygame: $(STAMPS)/cloned-pygame $(wildcard patches/pygame_sdl2
 	@cd $(PYGAME_SRC) && git checkout $(PYGAME_SDL2_TAG) -- . 2>/dev/null || true
 	@if ls patches/pygame_sdl2/*.patch 1>/dev/null 2>&1; then \
 		cd $(PYGAME_SRC) && \
+		set -e; \
 		for p in $(ROOT)/patches/pygame_sdl2/*.patch; do \
 			echo "    Applying $$(basename $$p)"; \
 			git apply "$$p"; \

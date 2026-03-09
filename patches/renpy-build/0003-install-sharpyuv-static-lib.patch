@@ -1,0 +1,12 @@
+diff --git a/tasks/libwebp.py b/tasks/libwebp.py
+index 177a8f2..c70118b 100644
+--- a/tasks/libwebp.py
++++ b/tasks/libwebp.py
+@@ -27,3 +27,7 @@ def build(c: Context):
+     """)
+     c.run("""{{ make }}""")
+     c.run("""make install """)
++
++    if c.path("sharpyuv/.libs/libsharpyuv.a").exists():
++        c.run("""install -d {{ install }}/lib""")
++        c.run("""install sharpyuv/.libs/libsharpyuv.a {{ install }}/lib/""")
