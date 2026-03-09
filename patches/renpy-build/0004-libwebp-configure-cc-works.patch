@@ -1,0 +1,13 @@
+diff --git a/tasks/libwebp.py b/tasks/libwebp.py
+index 177a8f2..53efbd0 100644
+--- a/tasks/libwebp.py
++++ b/tasks/libwebp.py
+@@ -17,6 +17,8 @@ def build(c: Context):
+     c.chdir("libwebp-{{version}}")
+ 
+     c.run("""
++    env
++    ac_cv_prog_cc_works=yes
+     {{configure}} {{ cross_config }}
+     --disable-shared
+     --prefix="{{ install }}"
