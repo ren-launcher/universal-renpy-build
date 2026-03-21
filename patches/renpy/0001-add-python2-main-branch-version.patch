@@ -1,0 +1,12 @@
+diff --git a/renpy/versions.py b/renpy/versions.py
+index 2e969e5..aa45d2c 100644
+--- a/renpy/versions.py
++++ b/renpy/versions.py
+@@ -50,6 +50,7 @@ class Version(object):
+ 
+ 
+ Version("main", 3, "8.4.0", "TBD")
++Version("main", 2, "7.8.7", "Straight on Till Morning")
+ 
+ Version("fix", 3, "8.3.7", "Second Star to the Right")
+ Version("fix", 2, "7.8.7", "Straight on Till Morning")
