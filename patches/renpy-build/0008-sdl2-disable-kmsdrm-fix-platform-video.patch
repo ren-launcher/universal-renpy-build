@@ -1,0 +1,12 @@
+diff --git a/tasks/sdl2.py b/tasks/sdl2.py
+index 6bbb9bb..f4b1796 100644
+--- a/tasks/sdl2.py
++++ b/tasks/sdl2.py
+@@ -48,6 +48,7 @@ def build(c):
+         --disable-render-metal
+         --disable-jack
+ 
++        --disable-video-kmsdrm
+         --disable-video-wayland
+ 
+     {% if c.platform == "android" %}
