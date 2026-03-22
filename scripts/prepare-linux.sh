@@ -11,6 +11,9 @@ echo "==> Installing core build tools..."
 apt-get update
 apt-get install -y git build-essential ccache curl unzip zip
 
+# Legacy compiler names expected by renpy-build 8.0.x toolchain scripts
+apt-get install -y gcc-9 g++-9
+
 # Clang 15 + LLD 15 — required by renpy-build 7.6.x as the host/cross compiler
 apt-get install -y clang-15 lld-15
 
@@ -29,6 +32,9 @@ apt-get install -y debootstrap
 # Autotools, pkg-config
 apt-get install -y autoconf automake libtool pkg-config
 
+# Required by Python-3.9.10 autoreconf in renpy-build 8.0.x
+apt-get install -y autoconf-archive
+
 # Host python build requirements
 apt-get install -y libssl-dev libbz2-dev liblzma-dev
 
@@ -39,6 +45,7 @@ apt-get install -y \
     libfreetype6-dev libpng-dev zlib1g-dev \
     libfribidi-dev libjpeg-dev \
     libharfbuzz-dev libbsd-dev \
+    libdrm-dev libgbm-dev \
     libwayland-dev wayland-protocols \
     nasm
 

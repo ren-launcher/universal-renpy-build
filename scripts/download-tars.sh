@@ -80,14 +80,15 @@ TARS_DIR="$BUILD_ROOT/tars"
 mkdir -p "$TARS_DIR"
 
 declare -A TOOLCHAIN_TARBALLS=(
+    ["android-ndk-r21d-linux-x86_64.zip"]="https://dl.google.com/android/repository/android-ndk-r21d-linux-x86_64.zip"
     ["android-ndk-r25c-linux.zip"]="https://dl.google.com/android/repository/android-ndk-r25c-linux.zip"
 )
 
 # Cross-compilation toolchains (not needed for Android-only builds)
 if [ "$ANDROID_ONLY" -eq 0 ]; then
     TOOLCHAIN_TARBALLS+=(
-        ["binutils-2.33.1.tar.gz"]="https://ftp.gnu.org/gnu/binutils/binutils-2.33.1.tar.gz"
-        ["gcc-9.2.0.tar.gz"]="https://ftp.gnu.org/gnu/gcc/gcc-9.2.0/gcc-9.2.0.tar.gz"
+        ["binutils-2.33.1.tar.gz"]="https://ftpmirror.gnu.org/binutils/binutils-2.33.1.tar.gz"
+        ["gcc-9.2.0.tar.gz"]="https://ftpmirror.gnu.org/gcc/gcc-9.2.0/gcc-9.2.0.tar.gz"
     )
 fi
 

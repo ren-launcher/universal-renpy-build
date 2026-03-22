@@ -23,11 +23,14 @@ check_cmd python3      "needed to run renpy-build"
 check_cmd make         "build system"
 check_cmd clang-15     "C/C++ compiler (apt: clang-15)"
 check_cmd lld-15       "LLVM linker (apt: lld-15)"
+check_cmd gcc-9        "legacy compiler name expected by renpy-build 8.0.x"
+check_cmd g++-9        "legacy C++ compiler name expected by renpy-build 8.0.x"
 check_cmd ccache       "compiler cache"
 check_cmd curl         "downloading source tarballs"
 check_cmd tar          "extracting archives"
 check_cmd pkg-config   "library discovery (apt: pkg-config)"
 check_cmd autoconf     "autotools"
+check_cmd autoreconf   "autotools (autoconf-archive required for Python 3.9 autoreconf)"
 
 # Python dependencies for renpy-build
 echo ""
@@ -53,9 +56,10 @@ if [ "$UNAME_S" = "Linux" ]; then
 
     echo ""
     echo "==> Checking Linux-specific packages..."
-    for pkg in libssl-dev libbz2-dev liblzma-dev libgmp-dev libmpfr-dev libmpc-dev \
+    for pkg in libssl-dev libbz2-dev liblzma-dev libgmp-dev libmpfr-dev libmpc-dev autoconf-archive \
                libsdl2-dev libsdl2-image-dev libsdl2-ttf-dev libsdl2-mixer-dev \
                libharfbuzz-dev libbsd-dev libwayland-dev wayland-protocols \
+               libdrm-dev libgbm-dev \
                libfreetype6-dev libfribidi-dev libpng-dev zlib1g-dev \
                libavcodec-dev libavformat-dev libswresample-dev libswscale-dev; do
         if dpkg -s "$pkg" &>/dev/null; then

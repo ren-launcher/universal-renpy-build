@@ -1,0 +1,17 @@
+diff --git a/tasks/openssl.py b/tasks/openssl.py
+index 6219744..af633d9 100644
+--- a/tasks/openssl.py
++++ b/tasks/openssl.py
+@@ -14,6 +14,12 @@ def unpack(c):
+ @task()
+ def build(c):
+     c.var("version", version)
++    expected = c.path("openssl-{{version}}")
++
++    if not expected.exists():
++        c.clean()
++        c.run("tar xzf {{source}}/openssl-{{version}}.tar.gz")
++
+     c.chdir("openssl-{{version}}")
+ 
+     if c.platform == "mac":
