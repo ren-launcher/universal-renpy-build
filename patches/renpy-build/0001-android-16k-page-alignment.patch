@@ -1,28 +1,31 @@
 diff --git a/renpybuild/run.py b/renpybuild/run.py
-index d9b1eb6..90dbbfb 100644
+index d97b51c..9ad0054 100644
 --- a/renpybuild/run.py
 +++ b/renpybuild/run.py
-@@ -295,6 +295,7 @@ def build_environment(c):
-         android_llvm(c, "x86_64")
+@@ -228,6 +228,7 @@ def build_environment(c):
+         c.env("READELF", "{{ crossbin }}readelf")
  
          c.env("CFLAGS", "{{ CFLAGS }} -DSDL_MAIN_HANDLED")
 +        c.env("LDFLAGS", "{{ LDFLAGS }} -Wl,-z,max-page-size=16384")
  
-         c.var("cmake_system_name", "Android")
-         c.var("cmake_system_processor", "x86_64")
-@@ -306,6 +307,7 @@ def build_environment(c):
-         android_llvm(c, "aarch64")
+     elif (c.platform == "android") and (c.arch == "arm64_v8a"):
+ 
+@@ -244,7 +245,9 @@ def build_environment(c):
+         c.env("NM", "{{ crossbin}}nm")
+         c.env("READELF", "{{ crossbin }}readelf")
+ 
+-        c.env("CFLAGS", "{{ CFLAGS }} -DSDL_MAIN_HANDLED")
++        c.env("CFLAGS", "{{ CFLAGS }} -DSDL_MAIN_HANDLED")
++        c.env("LDFLAGS", "{{ LDFLAGS }} -Wl,-z,max-page-size=16384")
++        c.env("LIBS", "{{ LIBS }} -latomic")
+ 
+     elif (c.platform == "android") and (c.arch == "armeabi_v7a"):
+ 
+@@ -262,6 +265,7 @@ def build_environment(c):
+         c.env("READELF", "{{ crossbin }}readelf")
  
          c.env("CFLAGS", "{{ CFLAGS }} -DSDL_MAIN_HANDLED")
 +        c.env("LDFLAGS", "{{ LDFLAGS }} -Wl,-z,max-page-size=16384")
  
-         c.var("cmake_system_name", "Android")
-         c.var("cmake_system_processor", "aarch64")
-@@ -317,6 +319,7 @@ def build_environment(c):
-         android_llvm(c, "armv7a")
+     # elif (c.platform == "mac") and (c.arch == "x86_64"):
  
-         c.env("CFLAGS", "{{ CFLAGS }} -DSDL_MAIN_HANDLED")
-+        c.env("LDFLAGS", "{{ LDFLAGS }} -Wl,-z,max-page-size=16384")
- 
-         c.var("cmake_system_name", "Android")
-         c.var("cmake_system_processor", "armv7-a")
