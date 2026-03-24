@@ -1,0 +1,13 @@
+diff --git a/tasks/pythonlib.py b/tasks/pythonlib.py
+index 2ce0b76..ce2cfc8 100644
+--- a/tasks/pythonlib.py
++++ b/tasks/pythonlib.py
+@@ -556,7 +556,7 @@ def python3(c):
+                 dest.parent.mkdir(parents=True, exist_ok=True)
+                 shutil.copy(fn, dest)
+ 
+-    # used_rules.add("steamapi")
++    used_rules.add("steamapi")
+ 
+     if rules - used_rules:
+         raise Exception(f"Unused rules: {rules - used_rules}")

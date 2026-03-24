@@ -43,9 +43,20 @@ endif
 # BUILD_PLATFORMS and BUILD_ARCHS to avoid hardcoding.
 ALL_PLATFORM_ARCHS := $(shell python3 -c "v={'linux':['x86_64','i686','armv7l','aarch64'],'android':['x86_64','arm64_v8a','armeabi_v7a'],'windows':['x86_64','i686'],'mac':['x86_64'],'ios':['arm64','sim-x86_64','sim-arm64']};print(' '.join(p+'-'+a for p in '$(BUILD_PLATFORMS)'.split(',') for a in '$(BUILD_ARCHS)'.split(',') if a in v.get(p,[])))")
 
+# ── Toolchain download list (derived from config.env + BUILD_PLATFORMS) ────
+DOWNLOAD_FILES :=
+ifneq ($(findstring android,$(BUILD_PLATFORMS)),)
+DOWNLOAD_FILES += $(TARS_ANDROID)
+endif
+ifneq ($(findstring linux,$(BUILD_PLATFORMS)),)
+DOWNLOAD_FILES += $(TARS_LINUX)
+endif
+
+DOWNLOAD_TARGETS := $(addprefix $(BUILD_ROOT)/tars/,$(DOWNLOAD_FILES))
+
 # ── Phony targets ──────────────────────────────────────────────────────────
 .PHONY: all build dist dist-rapt rebuild clean clean-build help \
-        clone patch tars setup check-env prepare
+        clone patch prepare
 
 # Default target
 all: build dist ## Full build: deps + modules + distribution
@@ -134,28 +145,39 @@ $(STAMPS)/patched-pygame: $(STAMPS)/cloned-pygame $(wildcard patches/pygame_sdl2
 patch: $(STAMPS)/patched-renpy-build $(STAMPS)/patched-renpy $(STAMPS)/patched-pygame ## Apply all patches
 
 # ============================================================================
-# Stage 3: Download source tarballs
+# Stage 3: Prepare build environment (tarballs + apt packages + Python venv)
 # ============================================================================
 
-$(STAMPS)/tars: $(STAMPS)/patched-renpy-build
-	@echo "==> Downloading source tarballs..."
-	$(ROOT)/scripts/download-tars.sh $(BUILD_ROOT)
+# Pattern rule: download any tarball using its URL.<filename> variable.
+$(BUILD_ROOT)/tars/%:
+	@mkdir -p $(dir $@)
+	@echo "  [dl] $*"
+	@curl -fSL --retry 3 --retry-delay 5 -o $@.tmp "$(URL.$*)" && mv $@.tmp $@
+
+ALL_PREPARE_PKGS := $(PREPARE_PKGS)
+ifneq ($(findstring linux,$(BUILD_PLATFORMS)),)
+ALL_PREPARE_PKGS += $(PREPARE_PKGS_LINUX)
+endif
+
+VENV := $(BUILD_ROOT)/tmp/venv
+
+$(STAMPS)/prepared: $(STAMPS)/cloned-renpy-build $(DOWNLOAD_TARGETS)
+	@echo "==> Installing system dependencies (requires sudo)..."
+	sudo apt-get update -qq
+	sudo apt-get install -y $(ALL_PREPARE_PKGS)
+	@echo "==> Setting up Python virtual environment..."
+	python3 -m venv $(VENV)
+	$(VENV)/bin/pip install --upgrade pip
+	$(VENV)/bin/pip install $(PIP_PACKAGES)
 	@touch $@
 
-tars: $(STAMPS)/tars ## Download dependency source tarballs
+prepare: $(STAMPS)/prepared ## Install deps, download tarballs, setup venv
 
 # ============================================================================
-# Stage 4: Environment setup (sysroot, toolchains — Linux only)
+# Stage 4: Build everything via renpy-build
 # ============================================================================
 
-setup: patch tars ## Prepare build environment (after clone + patch)
-	@echo "==> Build environment ready."
-
-# ============================================================================
-# Stage 5: Build everything via renpy-build
-# ============================================================================
-
-$(STAMPS)/built: $(STAMPS)/patched-renpy-build $(STAMPS)/patched-renpy $(STAMPS)/patched-pygame $(STAMPS)/tars
+$(STAMPS)/built: $(STAMPS)/prepared $(STAMPS)/patched-renpy-build $(STAMPS)/patched-renpy $(STAMPS)/patched-pygame
 	@echo "==> Preparing Live2D Cubism stub header..."
 	@for pa in $(ALL_PLATFORM_ARCHS); do \
 		mkdir -p "$(TMP)/install.$$pa/cubism/Core/include"; \
@@ -163,13 +185,13 @@ $(STAMPS)/built: $(STAMPS)/patched-renpy-build $(STAMPS)/patched-renpy $(STAMPS)
 		      "$(TMP)/install.$$pa/cubism/Core/include/" 2>/dev/null || true; \
 	done
 	@echo "==> Running renpy-build build.py..."
-	cd $(BUILD_ROOT) && python3 build.py $(BUILD_ARGS) build
+	cd $(BUILD_ROOT) && PATH=$(VENV)/bin:$$PATH $(VENV)/bin/python build.py $(BUILD_ARGS) build
 	@touch $@
 
 build: $(STAMPS)/built ## Build all C deps + modules via renpy-build
 
 # ============================================================================
-# Stage 6: Distribution packaging
+# Stage 5: Distribution packaging
 # ============================================================================
 
 dist: $(STAMPS)/built ## Package SDK + DLCs
@@ -201,17 +223,11 @@ rebuild: patch ## Rebuild specific tasks: make rebuild TASKS="renpython librenpy
 		cp -n "$(ROOT)/stubs/Live2DCubismCore.h" \
 		      "$(TMP)/install.$$pa/cubism/Core/include/" 2>/dev/null || true; \
 	done
-	cd $(BUILD_ROOT) && python3 build.py $(BUILD_ARGS) rebuild $(TASKS)
+	cd $(BUILD_ROOT) && PATH=$(VENV)/bin:$$PATH $(VENV)/bin/python build.py $(BUILD_ARGS) rebuild $(TASKS)
 
 # ============================================================================
 # Utility targets
 # ============================================================================
-
-check-env: ## Verify build prerequisites are installed
-	$(ROOT)/scripts/check-env.sh
-
-prepare: ## Install system dependencies (requires sudo)
-	$(ROOT)/scripts/prepare-linux.sh
 
 clean-build: ## Remove build artifacts (keeps source clones)
 	rm -rf $(TMP)

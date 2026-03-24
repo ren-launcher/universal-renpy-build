@@ -20,8 +20,9 @@ mkdir -p "$OUTPUT"
 
 cd "$RENPY_SRC"
 
-# ── Symlinks (Python 2 builds use rapt2/, renios2/) ─────────────────
+# ── Symlinks (Python 2 builds use rapt2/, Python 3 uses rapt3/) ─────
 if [ -L rapt ]; then rm -f rapt; fi
+if [ ! -e rapt ] && [ -d rapt3 ]; then ln -sf rapt3 rapt; fi
 if [ ! -e rapt ] && [ -d rapt2 ]; then ln -sf rapt2 rapt; fi
 
 if [ -L renios ]; then rm -f renios; fi
@@ -38,27 +39,35 @@ fi
 
 # ── Verify linux-x86_64 runtime exists ─────────────────────────────────────
 RENPY_BIN=""
-for candidate in lib/py2-linux-x86_64/renpy lib/linux-x86_64/renpy; do
+for candidate in lib/py3-linux-x86_64/renpy lib/py2-linux-x86_64/renpy lib/linux-x86_64/renpy; do
     if [ -f "$candidate" ]; then
         RENPY_BIN="$candidate"
         break
     fi
 done
 if [ -z "$RENPY_BIN" ]; then
-    echo "ERROR: renpy binary not found in lib/py2-linux-x86_64/ or lib/linux-x86_64/"
+    echo "ERROR: renpy binary not found in lib/py3-linux-x86_64/, lib/py2-linux-x86_64/, or lib/linux-x86_64/"
     echo "A full build (including linux platform) is required."
     exit 1
 fi
 
-# ── Create stub for mac-universal (not built, but checked by distribute) ───
-if [ ! -d lib/py2-mac-universal ] && [ ! -d lib/mac-x86_64 ]; then
-    if [ -d lib/py2-linux-x86_64 ]; then
-        mkdir -p lib/py2-mac-universal
-        cp lib/py2-linux-x86_64/renpy lib/py2-mac-universal/renpy
-    elif [ -d lib/linux-x86_64 ]; then
-        mkdir -p lib/mac-x86_64
-        cp lib/linux-x86_64/renpy lib/mac-x86_64/renpy
+# ── Create mac stubs expected by distribute (not actually built here) ──────
+if [ -d lib/py3-linux-x86_64 ]; then
+    if [ ! -f lib/py3-mac-universal/renpy ]; then
+        mkdir -p lib/py3-mac-universal
+        cp lib/py3-linux-x86_64/renpy lib/py3-mac-universal/renpy
     fi
+
+    if [ ! -f lib/py3-mac-x86_64/renpy ]; then
+        mkdir -p lib/py3-mac-x86_64
+        cp lib/py3-linux-x86_64/renpy lib/py3-mac-x86_64/renpy
+    fi
+elif [ -d lib/py2-linux-x86_64 ] && [ ! -f lib/py2-mac-universal/renpy ]; then
+    mkdir -p lib/py2-mac-universal
+    cp lib/py2-linux-x86_64/renpy lib/py2-mac-universal/renpy
+elif [ -d lib/linux-x86_64 ] && [ ! -f lib/mac-x86_64/renpy ]; then
+    mkdir -p lib/mac-x86_64
+    cp lib/linux-x86_64/renpy lib/mac-x86_64/renpy
 fi
 
 # ── Write vc_version.py ───────────────────────────────────────────────────
@@ -78,6 +87,7 @@ EOF
 # ── Environment for distribute ────────────────────────────────────────────
 export RENPY_SIMPLE_EXCEPTIONS=1
 export SDL_VIDEODRIVER=dummy
+export RENPY_BIN
 
 if [ ! -f update.pem ] || ! grep -q "BEGIN EC PRIVATE KEY" update.pem 2>/dev/null; then
     echo "==> update.pem missing or not EC format, generating ECDSA signing key..."
@@ -86,8 +96,11 @@ fi
 
 echo "==> Building RAPT distribution package (version $VERSION)..."
 
+# Remove stale compiled script caches from previous runtime variants.
+find renpy launcher-sdk rapt -type f \( -name '*.rpyc' -o -name '*.rpyb' \) -delete 2>/dev/null || true
+
 # Use the official Ren'Py distribute mechanism
-./renpy.sh launcher distribute launcher \
+./"$RENPY_BIN" launcher distribute launcher \
     --package rapt \
     --destination "dl/$VERSION" \
     --no-update

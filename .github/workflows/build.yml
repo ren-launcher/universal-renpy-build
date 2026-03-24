@@ -3,63 +3,20 @@ name: Build RAPT
 on:
   push:
     tags: ["v*"]
-  workflow_dispatch:
 
 jobs:
   # ════════════════════════════════════════════════════════════════════════
   # Build linux + android, then package RAPT DLC via official distribute
   # ════════════════════════════════════════════════════════════════════════
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 240
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install system dependencies
-        run: sudo ./scripts/prepare-linux.sh
-
-      - name: Clone sources
-        run: make clone
-
-      - name: Apply patches
-        run: make patch
-
-      - name: Cache source tarballs
-        uses: actions/cache@v4
-        with:
-          path: |
-            work/renpy-build/source
-            work/renpy-build/tars
-          key: tarballs-all-${{ hashFiles('scripts/download-tars.sh') }}
-
-      - name: Download source tarballs
-        run: make tars
-
-      - name: Cache build artifacts
-        uses: actions/cache@v4
-        with:
-          path: |
-            work/renpy-build/tmp/host
-            work/renpy-build/tmp/cross.linux
-            work/renpy-build/tmp/cross.android
-            work/renpy-build/tmp/sysroot.linux-x86_64
-            work/renpy-build/tmp/sysroot.linux-i686
-            work/renpy-build/tmp/install.linux-x86_64
-            work/renpy-build/tmp/install.linux-i686
-            work/renpy-build/tmp/install.android-arm64_v8a
-            work/renpy-build/tmp/install.android-armeabi_v7a
-            work/renpy-build/tmp/install.android-x86_64
-            work/renpy-build/tmp/complete
-          key: full-build-${{ hashFiles('config.env', 'patches/**') }}-${{ github.sha }}
-          restore-keys: |
-            full-build-${{ hashFiles('config.env', 'patches/**') }}-
-
-      - name: Build (linux + android)
-        run: make build
-
-      - name: Package RAPT DLC
+      - name: Build and Package RAPT DLC
         run: make dist-rapt
 
       - name: Upload artifact
@@ -73,9 +30,8 @@ jobs:
   # Release — create/update GitHub release from tag
   # ════════════════════════════════════════════════════════════════════════
   release:
-    if: startsWith(github.ref, 'refs/tags/')
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     permissions:
       contents: write
 

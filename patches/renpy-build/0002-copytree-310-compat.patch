@@ -1,0 +1,26 @@
+diff --git a/renpybuild/model.py b/renpybuild/model.py
+index 1ffd02b..e89eb13 100644
+--- a/renpybuild/model.py
++++ b/renpybuild/model.py
+@@ -9,12 +9,18 @@ import jinja2
+ 
+ import renpybuild.run
+ 
+-# Monkeypatch copytree to fix a problem with ignore_dangling_symnlinks.
++# Monkeypatch copytree to fix a problem with ignore_dangling_symlinks.
++# Use explicit full signature to avoid Python 3.10 positional/keyword conflict
++# where _copytree passes ignore_dangling_symlinks as a positional arg.
+ old_copytree = shutil.copytree
+ 
+ 
+-def copytree(*args, ignore_dangling_symlinks=True, **kwargs):
+-    return old_copytree(*args, ignore_dangling_symlinks=ignore_dangling_symlinks, **kwargs)
++def copytree(src, dst, symlinks=False, ignore=None, copy_function=shutil.copy2,
++             ignore_dangling_symlinks=True, dirs_exist_ok=False):
++    return old_copytree(src, dst, symlinks=symlinks, ignore=ignore,
++                        copy_function=copy_function,
++                        ignore_dangling_symlinks=ignore_dangling_symlinks,
++                        dirs_exist_ok=dirs_exist_ok)
+ 
+ 
+ shutil.copytree = copytree
