@@ -145,7 +145,7 @@ $(STAMPS)/patched-pygame: $(STAMPS)/cloned-pygame $(wildcard patches/pygame_sdl2
 patch: $(STAMPS)/patched-renpy-build $(STAMPS)/patched-renpy $(STAMPS)/patched-pygame ## Apply all patches
 
 # ============================================================================
-# Stage 3: Prepare build environment (tarballs + apt packages + Python venv)
+# Stage 3: Prepare build environment (tarballs + upstream prepare)
 # ============================================================================
 
 # Pattern rule: download any tarball using its URL.<filename> variable.
@@ -154,24 +154,14 @@ $(BUILD_ROOT)/tars/%:
 	@echo "  [dl] $*"
 	@curl -fSL --retry 3 --retry-delay 5 -o $@.tmp "$(URL.$*)" && mv $@.tmp $@
 
-ALL_PREPARE_PKGS := $(PREPARE_PKGS)
-ifneq ($(findstring linux,$(BUILD_PLATFORMS)),)
-ALL_PREPARE_PKGS += $(PREPARE_PKGS_LINUX)
-endif
+VENV := $(BUILD_ROOT)/tmp/virtualenv.py3
 
-VENV := $(BUILD_ROOT)/tmp/venv
-
-$(STAMPS)/prepared: $(STAMPS)/cloned-renpy-build $(DOWNLOAD_TARGETS)
-	@echo "==> Installing system dependencies (requires sudo)..."
-	sudo apt-get update -qq
-	sudo apt-get install -y $(ALL_PREPARE_PKGS)
-	@echo "==> Setting up Python virtual environment..."
-	python3 -m venv $(VENV)
-	$(VENV)/bin/pip install --upgrade pip
-	$(VENV)/bin/pip install $(PIP_PACKAGES)
+$(STAMPS)/prepared: $(STAMPS)/cloned-renpy-build $(STAMPS)/patched-renpy-build $(STAMPS)/patched-pygame $(STAMPS)/patched-renpy $(DOWNLOAD_TARGETS)
+	@echo "==> Installing dependencies via upstream prepare.sh (requires sudo)..."
+	@cd $(BUILD_ROOT) && bash ./prepare.sh
 	@touch $@
 
-prepare: $(STAMPS)/prepared ## Install deps, download tarballs, setup venv
+prepare: $(STAMPS)/prepared ## Install deps and download tarballs via upstream prepare
 
 # ============================================================================
 # Stage 4: Build everything via renpy-build

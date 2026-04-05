@@ -1,0 +1,10 @@
+--- a/nightly/git.sh
++++ b/nightly/git.sh
+@@ -1,6 +1,7 @@
+ #!/bin/bash
+ 
+ update () {
++    return
+     if [ -d "$BASE/$2/.git" ]; then
+         pushd "$BASE/$2"
+         git reset --hard

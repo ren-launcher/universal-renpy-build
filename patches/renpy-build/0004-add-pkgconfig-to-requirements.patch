@@ -1,0 +1,35 @@
+diff --git a/nightly/python.sh b/nightly/python.sh
+index d4b35ba..fd7282d 100644
+--- a/nightly/python.sh
++++ b/nightly/python.sh
+@@ -3,7 +3,7 @@
+ set -e
+ 
+ if [ ! -e $VENV/bin ]; then
+-    python3 -m venv $VENV
++    python3.10 -m venv $VENV
+ fi
+ 
+ . $VENV/bin/activate
+@@ -15,7 +15,7 @@ python2 ./fix_virtualenv.py || true
+ popd
+ 
+ pushd $BASE/pygame_sdl2
+-python setup.py install_headers
++python setup.py install_headers || true
+ popd
+ 
+ pushd $BASE/renpy
+diff --git a/requirements.txt b/requirements.txt
+index ca8a745..16afd5a 100644
+--- a/requirements.txt
++++ b/requirements.txt
+@@ -13,6 +13,8 @@ Jinja2==3.1.2
+ MarkupSafe==2.1.1
+ packaging==21.3
+ pefile==2022.5.30
++pkgconfig
++setuptools<71
+ pyasn1==0.4.8
+ Pygments==2.13.0
+ pyparsing==3.0.9
