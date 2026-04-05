@@ -1,3 +1,5 @@
+diff --git a/prepare.sh b/prepare.sh
+index cda636f..485d3de 100755
 --- a/prepare.sh
 +++ b/prepare.sh
 @@ -11,7 +11,7 @@ BASE="$ROOT"
@@ -5,15 +7,17 @@
  
  # Needed to build python things.
 -sudo apt-get install -y python2-dev python3-dev python3-venv
-+sudo apt-get install -y python3-dev python3-venv
++sudo apt-get install -y python3-dev python3-venv && sudo apt-get install -y python2-dev || true
  
  # Needed to install python2 pip
  sudo apt-get install -y curl
-@@ -37,6 +37,7 @@ sudo apt-get install -y quilt
- # Install the standard set of packages needed to build Ren'Py.
- sudo apt-get install -y \
+@@ -45,7 +45,8 @@ sudo apt-get install -y \
      libavcodec-dev libavformat-dev \
-+    libassimp-dev libharfbuzz-dev \
      libswresample-dev libswscale-dev libfreetype6-dev libfribidi-dev libsdl2-dev \
-     libsdl2-image-dev libsdl2-gfx-dev libsdl2-mixer-dev libsdl2-ttf-dev libjpeg-dev
+     libsdl2-image-dev libsdl2-gfx-dev libsdl2-mixer-dev libsdl2-ttf-dev libjpeg-dev \
+-    libharfbuzz-dev
++    libharfbuzz-dev \
++    libassimp-dev
+ 
+ mkdir -p $ROOT/tmp
  
