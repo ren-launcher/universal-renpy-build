@@ -1,24 +1,8 @@
 diff --git a/renpybuild/run.py b/renpybuild/run.py
-index 1234567..abcdef0 100644
+index f634058..47ce61a 100644
 --- a/renpybuild/run.py
 +++ b/renpybuild/run.py
-@@ -290,6 +290,7 @@ def build_environment(c):
-         android_llvm(c, "x86_64")
- 
-         c.env("CFLAGS", "{{ CFLAGS }} -DSDL_MAIN_HANDLED")
-+        c.env("LDFLAGS", "{{ LDFLAGS }} -Wl,-z,max-page-size=16384")
- 
-         c.var("cmake_system_name", "Android")
-         c.var("cmake_system_processor", "x86_64")
-@@ -301,6 +302,7 @@ def build_environment(c):
-         android_llvm(c, "aarch64")
- 
-         c.env("CFLAGS", "{{ CFLAGS }} -DSDL_MAIN_HANDLED")
-+        c.env("LDFLAGS", "{{ LDFLAGS }} -Wl,-z,max-page-size=16384")
- 
-         c.var("cmake_system_name", "Android")
-         c.var("cmake_system_processor", "aarch64")
-@@ -312,6 +314,7 @@ def build_environment(c):
+@@ -283,6 +283,7 @@ def build_environment(c):
          android_llvm(c, "armv7a")
  
          c.env("CFLAGS", "{{ CFLAGS }} -DSDL_MAIN_HANDLED")

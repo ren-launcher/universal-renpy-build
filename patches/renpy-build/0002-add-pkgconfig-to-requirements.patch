@@ -1,0 +1,11 @@
+diff --git a/requirements.txt b/requirements.txt
+index 12eeb0c..c764e0c 100644
+--- a/requirements.txt
++++ b/requirements.txt
+@@ -1,5 +1,6 @@
+ Cython==3.0.12
+ pefile==2022.5.30
++pkgconfig
+ alabaster==0.7.16
+ babel==2.16.0
+ certifi==2024.8.30
