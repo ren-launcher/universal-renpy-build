@@ -9,7 +9,7 @@ jobs:
   # Build linux + android, then package RAPT DLC via official distribute
   # ════════════════════════════════════════════════════════════════════════
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 240
 
     steps:
@@ -31,7 +31,7 @@ jobs:
   # ════════════════════════════════════════════════════════════════════════
   release:
     needs: build
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
 
