@@ -154,8 +154,6 @@ $(BUILD_ROOT)/tars/%:
 	@echo "  [dl] $*"
 	@curl -fSL --retry 3 --retry-delay 5 -o $@.tmp "$(URL.$*)" && mv $@.tmp $@
 
-VENV := $(BUILD_ROOT)/tmp/virtualenv.py3
-
 $(STAMPS)/prepared: $(STAMPS)/cloned-renpy-build $(STAMPS)/patched-renpy-build $(STAMPS)/patched-pygame $(STAMPS)/patched-renpy $(DOWNLOAD_TARGETS)
 	@echo "==> Installing dependencies via upstream prepare.sh (requires sudo)..."
 	@cd $(BUILD_ROOT) && bash ./prepare.sh
@@ -174,8 +172,8 @@ $(STAMPS)/built: $(STAMPS)/prepared $(STAMPS)/patched-renpy-build $(STAMPS)/patc
 		cp -n "$(ROOT)/stubs/Live2DCubismCore.h" \
 		      "$(TMP)/install.$$pa/cubism/Core/include/" 2>/dev/null || true; \
 	done
-	@echo "==> Running renpy-build build.py..."
-	cd $(BUILD_ROOT) && PATH=$(VENV)/bin:$$PATH $(VENV)/bin/python build.py $(BUILD_ARGS) build
+	@echo "==> Running renpy-build build.sh..."
+	cd $(BUILD_ROOT) && bash build.sh $(BUILD_ARGS) build
 	@touch $@
 
 build: $(STAMPS)/built ## Build all C deps + modules via renpy-build
@@ -213,7 +211,7 @@ rebuild: patch ## Rebuild specific tasks: make rebuild TASKS="renpython librenpy
 		cp -n "$(ROOT)/stubs/Live2DCubismCore.h" \
 		      "$(TMP)/install.$$pa/cubism/Core/include/" 2>/dev/null || true; \
 	done
-	cd $(BUILD_ROOT) && PATH=$(VENV)/bin:$$PATH $(VENV)/bin/python build.py $(BUILD_ARGS) rebuild $(TASKS)
+	cd $(BUILD_ROOT) && bash build.sh $(BUILD_ARGS) rebuild $(TASKS)
 
 # ============================================================================
 # Utility targets

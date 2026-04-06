@@ -1,8 +1,8 @@
 diff --git a/tasks/pythonlib.py b/tasks/pythonlib.py
-index b10134d..9bb5296 100644
+index 65169ac..a5566d6 100644
 --- a/tasks/pythonlib.py
 +++ b/tasks/pythonlib.py
-@@ -524,7 +524,7 @@ def python3(c: Context):
+@@ -255,7 +255,7 @@ def python3(c: Context):
                  dest.parent.mkdir(parents=True, exist_ok=True)
                  shutil.copy(fn, dest)
  
