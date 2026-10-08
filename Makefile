@@ -197,7 +197,7 @@ check-16k: $(STAMPS)/built ## Verify Android .so files are 16 KB page aligned
 	for d in $(TMP)/install.android-*; do \
 		[ -d "$$d" ] && dirs="$$dirs $$d"; \
 	done; \
-	for d in $$(find $(RENPY_SRC) $(TMP) -type d -name jniLibs 2>/dev/null); do \
+	for d in $$(find $(RENPY_SRC) -type d -name jniLibs 2>/dev/null); do \
 		dirs="$$dirs $$d"; \
 	done; \
 	if [ -z "$$dirs" ]; then \
