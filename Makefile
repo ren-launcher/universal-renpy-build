@@ -243,14 +243,7 @@ $(STAMPS)/rapt-native: $(STAMPS)/patched-rapt $(STAMPS)/cython $(STAMPS)/android
 	  export ANDROID_NDK_ROOT=$(ANDROID_NDK) && \
 	  cd $(RAPT_ROOT)/native && bash build.sh ""
 	@echo "==> Verifying 16K page alignment..."
-	@fail=0; \
-	for so in $$(find $(RAPT_ROOT)/project -name '*.so' -path '*/jniLibs/*'); do \
-	  align=$$(readelf -lW "$$so" 2>/dev/null | awk '/LOAD/{print $$NF}' | head -1); \
-	  if [ "$$align" != "0x4000" ]; then \
-	    echo "FAIL: $$so (align=$$align)"; fail=1; \
-	  fi; \
-	done; \
-	[ $$fail -eq 0 ] && echo "All .so files are 16K aligned." || exit 1
+	@$(ROOT)/scripts/check-16k-alignment.sh $(RAPT_ROOT)/project
 	@touch $@
 
 # ============================================================================

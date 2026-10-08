@@ -3,8 +3,10 @@ From: cnfatal <cnfatal@gmail.com>
 Date: Mon, 16 Feb 2026 01:24:05 +0800
 Subject: [PATCH 1/3] Add 16K page alignment support for Google Play
 
-Add -Wl,-z,max-page-size=16384 linker flag to ensure all .so files
-are 16K page aligned, as required by Google Play.
+Add -Wl,-z,max-page-size=16384 and -Wl,-z,common-page-size=16384 linker
+flags to ensure all .so files are 16K page aligned, as required by Google
+Play. Both flags are needed: max-page-size alone only aligns the first
+PT_LOAD segment, leaving the RW segment at the default 4K alignment.
 
 - Application.mk: add APP_LDFLAGS for ndk-build linked libraries
 - common.sh: add to LDFLAGS for Python/Cython module linking
@@ -21,7 +23,7 @@ index 4330b0c..4a85b67 100644
  APP_ABI := $(ARCH)
  APP_STL := c++_shared
  APP_CFLAGS += $(OFLAG)
-+APP_LDFLAGS += -Wl,-z,max-page-size=16384
++APP_LDFLAGS += -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384
  
  APP_PLATFORM := $(ANDROID_PLATFORM)
 \ No newline at end of file
@@ -34,7 +36,7 @@ index 71e950d..dfb9d3c 100644
  
      export CFLAGS="-DANDROID -D__ANDROID_API__=${ANDROID_PLATFORM#android-} $PICFLAG"
 -    export LDFLAGS="$PICFLAG"
-+    export LDFLAGS="$PICFLAG -Wl,-z,max-page-size=16384"
++    export LDFLAGS="$PICFLAG -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384"
  
      libdir "$INSTALLDIR/lib"
      libdir "$NATIVE/obj/local/$PLATFORM"
