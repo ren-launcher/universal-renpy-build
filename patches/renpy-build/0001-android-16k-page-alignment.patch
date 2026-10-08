@@ -6,7 +6,7 @@ index 4a00fe3..834c091 100644
          c.env("NM", "{{ crossbin}}nm")
  
          c.env("CFLAGS", "{{ CFLAGS }} -DSDL_MAIN_HANDLED")
-+        c.env("LDFLAGS", "{{ LDFLAGS }} -Wl,-z,max-page-size=16384")
++        c.env("LDFLAGS", "{{ LDFLAGS }} -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384")
  
      elif (c.platform == "android") and (c.arch == "arm64_v8a"):
  
@@ -14,7 +14,7 @@ index 4a00fe3..834c091 100644
          c.env("NM", "{{ crossbin}}nm")
  
          c.env("CFLAGS", "{{ CFLAGS }} -DSDL_MAIN_HANDLED")
-+        c.env("LDFLAGS", "{{ LDFLAGS }} -Wl,-z,max-page-size=16384")
++        c.env("LDFLAGS", "{{ LDFLAGS }} -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384")
  
      elif (c.platform == "android") and (c.arch == "armeabi_v7a"):
  
@@ -22,7 +22,7 @@ index 4a00fe3..834c091 100644
          c.env("NM", "{{ crossbin}}nm")
  
          c.env("CFLAGS", "{{ CFLAGS }} -DSDL_MAIN_HANDLED")
-+        c.env("LDFLAGS", "{{ LDFLAGS }} -Wl,-z,max-page-size=16384")
++        c.env("LDFLAGS", "{{ LDFLAGS }} -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384")
  
      elif (c.platform == "ios") and (c.arch == "arm64"):
  

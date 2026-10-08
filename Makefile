@@ -45,7 +45,7 @@ ALL_PLATFORM_ARCHS := $(shell python3 -c "v={'linux':['x86_64','i686','armv7l','
 
 # ── Phony targets ──────────────────────────────────────────────────────────
 .PHONY: all build dist dist-rapt rebuild clean clean-build help \
-        clone patch tars setup check-env
+        clone patch tars setup check-env check-16k
 
 # Default target
 all: build dist ## Full build: deps + modules + distribution
@@ -180,12 +180,30 @@ dist: $(STAMPS)/built ## Package SDK + DLCs
 # RAPT DLC — package only (requires full build for linux-x86_64 runtime)
 # ============================================================================
 
-dist-rapt: $(STAMPS)/built ## Package RAPT DLC (requires build first)
+dist-rapt: check-16k ## Package RAPT DLC (requires build first)
 	@echo "==> Packaging RAPT DLC..."
 	$(ROOT)/scripts/distribute-rapt.sh \
 		"$(RENPY_SRC)" "$(PYGAME_SRC)" "$(BUILD_ROOT)" "$(TMP)" \
 		"$(RENPY_VERSION)" "$(RENPY_TAG)" \
 		"$(OUTPUT)"
+
+# ============================================================================
+# 16K page alignment verification (Google Play requirement)
+# ============================================================================
+
+check-16k: $(STAMPS)/built ## Verify Android .so files are 16 KB page aligned
+	@echo "==> Checking 16K page alignment..."
+	@dirs=""; \
+	for d in $(TMP)/install.android-*; do \
+		[ -d "$$d" ] && dirs="$$dirs $$d"; \
+	done; \
+	for d in $$(find $(RENPY_SRC) $(TMP) -type d -name jniLibs 2>/dev/null); do \
+		dirs="$$dirs $$d"; \
+	done; \
+	if [ -z "$$dirs" ]; then \
+		echo "ERROR: no Android library directories found"; exit 1; \
+	fi; \
+	$(ROOT)/scripts/check-16k-alignment.sh $$dirs
 
 # ============================================================================
 # Rebuild specific tasks (pass TASKS="taskname")
