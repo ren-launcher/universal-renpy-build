@@ -6,7 +6,7 @@ index d97b51c..9ad0054 100644
          c.env("READELF", "{{ crossbin }}readelf")
  
          c.env("CFLAGS", "{{ CFLAGS }} -DSDL_MAIN_HANDLED")
-+        c.env("LDFLAGS", "{{ LDFLAGS }} -Wl,-z,max-page-size=16384")
++        c.env("LDFLAGS", "{{ LDFLAGS }} -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384")
  
      elif (c.platform == "android") and (c.arch == "arm64_v8a"):
  
@@ -16,7 +16,7 @@ index d97b51c..9ad0054 100644
  
 -        c.env("CFLAGS", "{{ CFLAGS }} -DSDL_MAIN_HANDLED")
 +        c.env("CFLAGS", "{{ CFLAGS }} -DSDL_MAIN_HANDLED")
-+        c.env("LDFLAGS", "{{ LDFLAGS }} -Wl,-z,max-page-size=16384")
++        c.env("LDFLAGS", "{{ LDFLAGS }} -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384")
 +        c.env("LIBS", "{{ LIBS }} -latomic")
  
      elif (c.platform == "android") and (c.arch == "armeabi_v7a"):
@@ -25,7 +25,7 @@ index d97b51c..9ad0054 100644
          c.env("READELF", "{{ crossbin }}readelf")
  
          c.env("CFLAGS", "{{ CFLAGS }} -DSDL_MAIN_HANDLED")
-+        c.env("LDFLAGS", "{{ LDFLAGS }} -Wl,-z,max-page-size=16384")
++        c.env("LDFLAGS", "{{ LDFLAGS }} -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384")
  
      # elif (c.platform == "mac") and (c.arch == "x86_64"):
  
